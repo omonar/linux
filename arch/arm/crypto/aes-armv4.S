@@ -35,7 +35,6 @@
 @ that is being targetted.
 
 #include <linux/linkage.h>
-#include <asm/assembler.h>
 
 .text
 
@@ -154,7 +153,7 @@ ENTRY(AES_encrypt)
 	mov	r12,r0		@ inp
 	mov	r11,r2
 	sub	r10,r3,#AES_encrypt-AES_Te	@ Te
-#if __ARM_ARCH__<7
+#ifndef CONFIG_DCACHE_WORD_ACCESS
 	ldrb	r0,[r12,#3]	@ load input data in endian-neutral
 	ldrb	r4,[r12,#2]	@ manner...
 	ldrb	r5,[r12,#1]
@@ -198,7 +197,7 @@ ENTRY(AES_encrypt)
 	bl	_armv4_AES_encrypt
 
 	ldr	r12,[sp],#4		@ pop out
-#if __ARM_ARCH__>=7
+#ifdef CONFIG_DCACHE_WORD_ACCESS
 #ifdef __ARMEL__
 	rev	r0,r0
 	rev	r1,r1
@@ -405,7 +404,7 @@ _armv4_AES_set_encrypt_key:
 	mov	lr,r1			@ bits
 	mov	r11,r2			@ key
 
-#if __ARM_ARCH__<7
+#ifndef CONFIG_DCACHE_WORD_ACCESS
 	ldrb	r0,[r12,#3]	@ load input data in endian-neutral
 	ldrb	r4,[r12,#2]	@ manner...
 	ldrb	r5,[r12,#1]
@@ -490,7 +489,7 @@ _armv4_AES_set_encrypt_key:
 	b	.Ldone
 
 .Lnot128:
-#if __ARM_ARCH__<7
+#ifndef CONFIG_DCACHE_WORD_ACCESS
 	ldrb	r8,[r12,#19]
 	ldrb	r4,[r12,#18]
 	ldrb	r5,[r12,#17]
@@ -561,7 +560,7 @@ _armv4_AES_set_encrypt_key:
 	b	.L192_loop
 
 .Lnot192:
-#if __ARM_ARCH__<7
+#ifndef CONFIG_DCACHE_WORD_ACCESS
 	ldrb	r8,[r12,#27]
 	ldrb	r4,[r12,#26]
 	ldrb	r5,[r12,#25]
@@ -649,7 +648,7 @@ _armv4_AES_set_encrypt_key:
 
 .Ldone:	mov	r0,#0
 	ldmia   sp!,{r4-r12,lr}
-.Labrt:	ret	lr
+.Labrt:	mov	pc,lr
 ENDPROC(private_AES_set_encrypt_key)
 
 .align	5
@@ -849,7 +848,7 @@ ENTRY(AES_decrypt)
 	mov	r12,r0		@ inp
 	mov	r11,r2
 	sub	r10,r3,#AES_decrypt-AES_Td		@ Td
-#if __ARM_ARCH__<7
+#ifndef CONFIG_DCACHE_WORD_ACCESS
 	ldrb	r0,[r12,#3]	@ load input data in endian-neutral
 	ldrb	r4,[r12,#2]	@ manner...
 	ldrb	r5,[r12,#1]
@@ -893,7 +892,7 @@ ENTRY(AES_decrypt)
 	bl	_armv4_AES_decrypt
 
 	ldr	r12,[sp],#4		@ pop out
-#if __ARM_ARCH__>=7
+#ifdef CONFIG_DCACHE_WORD_ACCESS
 #ifdef __ARMEL__
 	rev	r0,r0
 	rev	r1,r1
