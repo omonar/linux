@@ -198,6 +198,11 @@ config CRYPTO_GLUE_HELPER_X86
 	depends on X86
 	select CRYPTO_ALGAPI
 
+config CRYPTO_GLUE_HELPER_ARM
+	tristate
+	depends on ARM && KERNEL_MODE_NEON
+	select CRYPTO_ALGAPI
+
 comment "Authenticated Encryption with Associated Data"
 
 config CRYPTO_CCM
@@ -1310,6 +1315,30 @@ config CRYPTO_SERPENT_ARM
 
 	  This module provides Serpent cipher algorithm that processes 16
 	  blocks parallel using AVX2 instruction set.
+
+	  See also:
+	  <http://www.cl.cam.ac.uk/~rja14/serpent.html>
+
+config CRYPTO_SERPENT_ARM_NEON
+	tristate "Serpent cipher algorithm (ARM-NEON)"
+	depends on ARM && KERNEL_MODE_NEON
+	select CRYPTO_ALGAPI
+	select CRYPTO_SERPENT_ARM
+	select CRYPTO_ABLK_HELPER
+	select CRYPTO_CRYPTD
+	select CRYPTO_ABLK_HELPER
+	select CRYPTO_GLUE_HELPER_ARM
+	select CRYPTO_SERPENT
+	select CRYPTO_LRW
+	select CRYPTO_XTS
+	help
+	  Serpent cipher algorithm, by Anderson, Biham & Knudsen.
+
+	  Keys are allowed to be from 0 to 256 bits in length, in steps
+	  of 8 bits.
+
+	  This module provides Serpent cipher algorithm that processes eigth
+	  blocks parallel using NEON instruction set.
 
 	  See also:
 	  <http://www.cl.cam.ac.uk/~rja14/serpent.html>
