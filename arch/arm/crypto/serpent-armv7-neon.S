@@ -683,6 +683,7 @@ ENTRY(serpent_xts_enc_8way_neon)
 
 	/* regs <= src, dst <= IVs, regs <= regs xor IVs */
 	load_xts_8way(%r3, %r4, %r2, %r1, RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3,
+		      RA4, RB4,
 		      RT0, RT1, RT2, .Lxts_gf128mul_and_shl1_mask);
 
 	bl __serpent_enc_blk8_neon;
@@ -706,6 +707,7 @@ ENTRY(serpent_xts_dec_8way_neon)
 
 	/* regs <= src, dst <= IVs, regs <= regs xor IVs */
 	load_xts_8way(%r3, %r4, %r2, %r1, RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3,
+		      RA4, RB4,
 		      RT0, RT1, RT2, .Lxts_gf128mul_and_shl1_mask);
 
 	bl __serpent_dec_blk8_neon;

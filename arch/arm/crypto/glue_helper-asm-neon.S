@@ -136,54 +136,88 @@
 	veor iv, iv, tmp;
 
 #define load_xts_8way(iv, arm32, src, dst, x0, x1, x2, x3, x4, x5, x6, x7, \
-		      t0, t1, tiv, xts_gf128mul_and_shl1_mask) \
+		      tiv0, tiv1, \
+		      t0, t1, t2, xts_gf128mul_and_shl1_mask) \
 	adr arm32, xts_gf128mul_and_shl1_mask; \
 	/* load IV */ \
-	vld1.8 {tiv}, [iv]; \
-	vld1.8 {x0}, [src]!; \
+	vld1.8 {tiv0}, [iv]; \
+	vld1.8 {t2}, [arm32]; \
 	\
-	veor x0, x0, tiv; \
-	vst1.8 {tiv}, [dst]!; \
-	\
-	vld1.8 {t0}, [arm32]; \
 	/* construct and store IVs, also xor with source */ \
-	gf128mul_x_ble(tiv, t0, t1, t1##d1, t1##d0); \
+	vshr.s64 t0, tiv0, #63; \
+	vld1.8 {x0}, [src]!; \
+	vand t0, t0, t2; \
+	vadd.u64 tiv1, tiv0, tiv0; \
+	vst1.8 {tiv0}, [dst]!; \
+	vswp t0##d1, t0##d0; \
+	\
+	vshr.s64 t1, tiv1, #63; \
+	veor tiv1, tiv1, t0; \
+	vand t1, t1, t2; \
 	vld1.8 {x1}, [src]!; \
-	veor x1, x1, tiv; \
-	vst1.8 {tiv}, [dst]!; \
+	veor x0, x0, tiv0; \
+	vadd.u64 tiv0, tiv1, tiv1; \
+	vst1.8 {tiv1}, [dst]!; \
+	vswp t1##d1, t1##d0; \
 	\
-	gf128mul_x_ble(tiv, t0, t1, t1##d1, t1##d0); \
+	vshr.s64 t0, tiv0, #63; \
+	veor tiv0, tiv0, t1; \
+	vand t0, t0, t2; \
 	vld1.8 {x2}, [src]!; \
-	veor x2, x2, tiv; \
-	vst1.8 {tiv}, [dst]!; \
+	veor x1, x1, tiv1; \
+	vadd.u64 tiv1, tiv0, tiv0; \
+	vst1.8 {tiv0}, [dst]!; \
+	vswp t0##d1, t0##d0; \
 	\
-	gf128mul_x_ble(tiv, t0, t1, t1##d1, t1##d0); \
+	vshr.s64 t1, tiv1, #63; \
+	veor tiv1, tiv1, t0; \
+	vand t1, t1, t2; \
 	vld1.8 {x3}, [src]!; \
-	veor x3, x3, tiv; \
-	vst1.8 {tiv}, [dst]!; \
+	veor x2, x2, tiv0; \
+	vadd.u64 tiv0, tiv1, tiv1; \
+	vst1.8 {tiv1}, [dst]!; \
+	vswp t1##d1, t1##d0; \
 	\
-	gf128mul_x_ble(tiv, t0, t1, t1##d1, t1##d0); \
+	vshr.s64 t0, tiv0, #63; \
+	veor tiv0, tiv0, t1; \
+	vand t0, t0, t2; \
 	vld1.8 {x4}, [src]!; \
-	veor x4, x4, tiv; \
-	vst1.8 {tiv}, [dst]!; \
+	veor x3, x3, tiv1; \
+	vadd.u64 tiv1, tiv0, tiv0; \
+	vst1.8 {tiv0}, [dst]!; \
+	vswp t0##d1, t0##d0; \
 	\
-	gf128mul_x_ble(tiv, t0, t1, t1##d1, t1##d0); \
+	vshr.s64 t1, tiv1, #63; \
+	veor tiv1, tiv1, t0; \
+	vand t1, t1, t2; \
 	vld1.8 {x5}, [src]!; \
-	veor x5, x5, tiv; \
-	vst1.8 {tiv}, [dst]!; \
+	veor x4, x4, tiv0; \
+	vadd.u64 tiv0, tiv1, tiv1; \
+	vst1.8 {tiv1}, [dst]!; \
+	vswp t1##d1, t1##d0; \
 	\
-	gf128mul_x_ble(tiv, t0, t1, t1##d1, t1##d0); \
+	vshr.s64 t0, tiv0, #63; \
+	veor tiv0, tiv0, t1; \
+	vand t0, t0, t2; \
 	vld1.8 {x6}, [src]!; \
-	veor x6, x6, tiv; \
-	vst1.8 {tiv}, [dst]!; \
+	veor x5, x5, tiv1; \
+	vadd.u64 tiv1, tiv0, tiv0; \
+	vst1.8 {tiv0}, [dst]!; \
+	vswp t0##d1, t0##d0; \
 	\
-	gf128mul_x_ble(tiv, t0, t1, t1##d1, t1##d0); \
+	vshr.s64 t1, tiv1, #63; \
+	veor tiv1, tiv1, t0; \
+	vand t1, t1, t2; \
 	vld1.8 {x7}, [src]!; \
-	veor x7, x7, tiv; \
-	vst1.8 {tiv}, [dst]!; \
+	veor x6, x6, tiv0; \
+	vadd.u64 tiv0, tiv1, tiv1; \
+	vst1.8 {tiv1}, [dst]!; \
+	vswp t1##d1, t1##d0; \
 	\
-	gf128mul_x_ble(tiv, t0, t1, t1##d1, t1##d0); \
-	vst1.8 {tiv}, [iv]; \
+	veor x7, x7, tiv1; \
+	veor tiv0, tiv0, t1; \
+	\
+	vst1.8 {tiv0}, [iv]; \
 	sub dst, dst, #(8*16);
 
 #define store_xts_8way(dst, x0, x1, x2, x3, x4, x5, x6, x7, t0, t1, t2, t3) \
