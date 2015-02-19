@@ -2076,9 +2076,6 @@ bsaes_xts_decrypt:
 	vld1.8	{@XMM[8]}, [r0]			@ initial tweak
 	adr	$magic, .Lxts_magic
 
-	tst	$len, #0xf			@ if not multiple of 16
-	it	ne				@ Thumb2 thing, sanity check in ARM
-	subne	$len, #0x10			@ subtract another 16 bytes
 	subs	$len, #0x80
 
 	blo	.Lxts_dec_short
