@@ -67,47 +67,70 @@
 	vsub.i64 x, x, tmp;
 
 #define load_ctr_8way(iv, x0, x1, x2, x3, x4, x5, x6, x7, t0, t1, t2) \
-	vceq.i32 t0, t0, t0; /* u128: - 1 */ \
-	\
 	/* load IV and byteswap */ \
-	vld1.8 {x7}, [iv]; \
-	veor t0##d1, t0##d1, t0##d1; /* u64_high: 0 u64_low: -1 */ \
-	vrev64.u8 x0, x7; \
+	vld1.8 {x0}, [iv]; \
+	vceq.i32 t0##d1, t2##d1, t2##d1; /* u64: - 1 */ \
+	vswp x0##d1, x0##d0; \
 	\
 	/* construct IVs */ \
-	inc_le128(x7, t0, t2, t2##d1, t2##d0); \
-	vswp x0##d1, x0##d0; \
-	vrev64.u8 x1, x7; \
+	vceq.i32 t1##d1, x0##d1, t0##d1; \
+	vsub.i64 x1##d1, x0##d1, t0##d1; \
+	vrev64.32 t1##d0, t1##d1; \
+	vand t1##d0, t1##d0, t1##d1; \
 	\
-	inc_le128(x7, t0, t2, t2##d1, t2##d0); \
-	vswp x1##d1, x1##d0; \
-	vrev64.u8 x2, x7; \
+	vceq.i32 t2##d1, x1##d1, t0##d1; \
+	vsub.i64 x2##d1, x1##d1, t0##d1; \
+	vrev64.32 t2##d0, t2##d1; \
+	    vsub.i64 x1##d0, x0##d0, t1##d0; \
+	vand t2##d0, t2##d0, t2##d1; \
+	    vrev64.u8 x0, x0; \
 	\
-	inc_le128(x7, t0, t2, t2##d1, t2##d0); \
-	vswp x2##d1, x2##d0; \
-	vrev64.u8 x3, x7; \
+	vceq.i32 t1##d1, x2##d1, t0##d1; \
+	vsub.i64 x3##d1, x2##d1, t0##d1; \
+	vrev64.32 t1##d0, t1##d1; \
+	    vsub.i64 x2##d0, x1##d0, t2##d0; \
+	vand t1##d0, t1##d0, t1##d1; \
+	    vrev64.u8 x1, x1; \
 	\
-	inc_le128(x7, t0, t2, t2##d1, t2##d0); \
-	vswp x3##d1, x3##d0; \
-	vrev64.u8 x4, x7; \
+	vceq.i32 t2##d1, x3##d1, t0##d1; \
+	vsub.i64 x4##d1, x3##d1, t0##d1; \
+	vrev64.32 t2##d0, t2##d1; \
+	    vsub.i64 x3##d0, x2##d0, t1##d0; \
+	vand t2##d0, t2##d0, t2##d1; \
+	    vrev64.u8 x2, x2; \
 	\
-	inc_le128(x7, t0, t2, t2##d1, t2##d0); \
-	vswp x4##d1, x4##d0; \
-	vrev64.u8 x5, x7; \
+	vceq.i32 t1##d1, x4##d1, t0##d1; \
+	vsub.i64 x5##d1, x4##d1, t0##d1; \
+	vrev64.32 t1##d0, t1##d1; \
+	    vsub.i64 x4##d0, x3##d0, t2##d0; \
+	vand t1##d0, t1##d0, t1##d1; \
+	    vrev64.u8 x3, x3; \
 	\
-	inc_le128(x7, t0, t2, t2##d1, t2##d0); \
-	vswp x5##d1, x5##d0; \
-	vrev64.u8 x6, x7; \
+	vceq.i32 t2##d1, x5##d1, t0##d1; \
+	vsub.i64 x6##d1, x5##d1, t0##d1; \
+	vrev64.32 t2##d0, t2##d1; \
+	    vsub.i64 x5##d0, x4##d0, t1##d0; \
+	vand t2##d0, t2##d0, t2##d1; \
+	    vrev64.u8 x4, x4; \
 	\
-	inc_le128(x7, t0, t2, t2##d1, t2##d0); \
-	vswp x6##d1, x6##d0; \
-	vmov t2, x7; \
-	vrev64.u8 x7, x7; \
+	vceq.i32 t1##d1, x6##d1, t0##d1; \
+	vsub.i64 x7##d1, x6##d1, t0##d1; \
+	vrev64.32 t1##d0, t1##d1; \
+	    vsub.i64 x6##d0, x5##d0, t2##d0; \
+	vand t1##d0, t1##d0, t1##d1; \
+	    vrev64.u8 x5, x5; \
 	\
-	inc_le128(t2, t0, t1, t1##d1, t1##d0); \
-	vswp x7##d1, x7##d0; \
+	vceq.i32 t2##d1, x7##d1, t0##d1; \
+	    vsub.i64 x7##d0, x6##d0, t1##d0; \
+	vrev64.32 t2##d0, t2##d1; \
+	    vrev64.u8 x6, x6; \
+	\
+	vand t2##d0, t2##d0, t2##d1; \
+	vsub.i64 t1##d0, x7##d1, t0##d1; \
+	vsub.i64 t1##d1, x7##d0, t2##d0; \
 	/* store new IVs */ \
-	vst1.8 {t2}, [iv];
+	    vrev64.u8 x7, x7; \
+	vst1.8 {t1}, [iv];
 
 #define store_ctr_8way(src, dst, x0, x1, x2, x3, x4, x5, x6, x7, t0, t1, t2, t3) \
 	vld1.8 {t0, t1}, [src]!; \
