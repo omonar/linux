@@ -1403,14 +1403,40 @@ config CRYPTO_TWOFISH_ARM
 	select CRYPTO_ALGAPI
 	select CRYPTO_TWOFISH_COMMON
 	help
-	  Use optimized AES assembler routines for ARM platforms.
-
 	  Twofish cipher algorithm.
 
 	  Twofish was submitted as an AES (Advanced Encryption Standard)
 	  candidate cipher by researchers at CounterPane Systems.  It is a
 	  16 round block cipher supporting key sizes of 128, 192, and 256
 	  bits.
+
+	  Use optimized Twofish assembler routines for ARM platforms.
+
+	  See also:
+	  <http://www.schneier.com/twofish.html>
+
+config CRYPTO_TWOFISH_ARM_NEON
+	tristate "Twofish cipher algorithms (ARM-NEON)"
+	depends on ARM && KERNEL_MODE_NEON
+	select CRYPTO_ALGAPI
+	select CRYPTO_TWOFISH_ARM
+	select CRYPTO_ABLK_HELPER
+	select CRYPTO_CRYPTD
+	select CRYPTO_ABLK_HELPER
+	select CRYPTO_GLUE_HELPER_ARM
+	select CRYPTO_TWOFISH_COMMON
+	select CRYPTO_LRW
+	select CRYPTO_XTS
+	help
+	  Twofish cipher algorithm.
+
+	  Twofish was submitted as an AES (Advanced Encryption Standard)
+	  candidate cipher by researchers at CounterPane Systems.  It is a
+	  16 round block cipher supporting key sizes of 128, 192, and 256
+	  bits.
+
+	  This module provides Twofish cipher algorithm that processes eigth
+	  blocks parallel using NEON instruction set.
 
 	  See also:
 	  <http://www.schneier.com/twofish.html>
