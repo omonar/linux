@@ -397,10 +397,10 @@ __twofish_enc_blk8_neon:
 __twofish_dec_blk8_neon:
 	/* input:
 	 *	r0: twofish_ctx pointer
-	 *	RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3: eight parallel
+	 *	RA2, RA3, RA0, RA1, RB2, RB3, RB0, RB1: eight parallel
 	 * 						ciphertext blocks
 	 * output:
-	 *	RA2, RA3, RA0, RA1, RB2, RB3, RB0, RB1: eight parallel plaintext
+	 *	RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3: eight parallel plaintext
 	 *						blocks
 	 */
 
@@ -561,13 +561,13 @@ ENTRY(twofish_ecb_dec_8way_neon)
 
 	stmdb sp!, {r1, r4-r12, lr};
 
-	load_8way(%r2, RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3);
+	load_8way(%r2, RA2, RA3, RA0, RA1, RB2, RB3, RB0, RB1);
 
 	bl __twofish_dec_blk8_neon;
 
 	pop {r1};
 
-	store_8way(%r1, RA2, RA3, RA0, RA1, RB2, RB3, RB0, RB1);
+	store_8way(%r1, RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3);
 
 	pop {r4-r12, pc};
 ENDPROC(twofish_ecb_dec_8way_neon)
@@ -581,13 +581,13 @@ ENTRY(twofish_cbc_dec_8way_neon)
 
 	stmdb sp!, {r1, r2, r4-r12, lr};
 
-	load_8way(%r2, RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3);
+	load_8way(%r2, RA2, RA3, RA0, RA1, RB2, RB3, RB0, RB1);
 
 	bl __twofish_dec_blk8_neon;
 
 	pop {r1, r2};
 
-	store_cbc_8way(%r2, %r1, RA2, RA3, RA0, RA1, RB2, RB3, RB0, RB1, RT0, RT1, RT2, RT3);
+	store_cbc_8way(%r2, %r1, RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3, RT0, RT1, RT2, RT3);
 
 	pop {r4-r12, pc};
 ENDPROC(twofish_cbc_dec_8way_neon)
@@ -652,7 +652,7 @@ ENTRY(twofish_xts_dec_8way_neon)
 	stmdb sp!, {r1, r4-r12, lr};
 
 	/* regs <= src, dst <= IVs, regs <= regs xor IVs */
-	load_xts_8way(%r3, %r4, %r2, %r1, RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3,
+	load_xts_8way(%r3, %r4, %r2, %r1, RA2, RA3, RA0, RA1, RB2, RB3, RB0, RB1,
 		      RX, RY,
 		      RT0, RT1, RT2, .Lxts_gf128mul_and_shl1_mask);
 
@@ -661,7 +661,7 @@ ENTRY(twofish_xts_dec_8way_neon)
 	pop {r1};
 
 	/* dst <= regs xor IVs(in dst) */
-	store_xts_8way(%r1, RA2, RA3, RA0, RA1, RB2, RB3, RB0, RB1,
+	store_xts_8way(%r1, RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3,
 		       RT0, RT1, RT2, RT3);
 
 	pop {r4-r12, pc};
