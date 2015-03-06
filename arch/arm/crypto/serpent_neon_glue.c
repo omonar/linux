@@ -72,7 +72,7 @@ void __serpent_crypt_ctr(void *ctx, u128 *dst, const u128 *src, le128 *iv)
 	le128_to_be128(&ctrblk, iv);
 	le128_inc(iv);
 
-	__serpent_encrypt(ctx, (u8 *)&ctrblk, (u8 *)&ctrblk);
+	serpent_enc_blk(ctx, (u8 *)&ctrblk, (u8 *)&ctrblk);
 	u128_xor(dst, src, (u128 *)&ctrblk);
 }
 EXPORT_SYMBOL_GPL(__serpent_crypt_ctr);
@@ -80,14 +80,14 @@ EXPORT_SYMBOL_GPL(__serpent_crypt_ctr);
 void serpent_xts_enc(void *ctx, u128 *dst, const u128 *src, le128 *iv)
 {
 	glue_xts_crypt_128bit_one(ctx, dst, src, iv,
-				  GLUE_FUNC_CAST(__serpent_encrypt));
+				  GLUE_FUNC_CAST(serpent_enc_blk));
 }
 EXPORT_SYMBOL_GPL(serpent_xts_enc);
 
 void serpent_xts_dec(void *ctx, u128 *dst, const u128 *src, le128 *iv)
 {
 	glue_xts_crypt_128bit_one(ctx, dst, src, iv,
-				  GLUE_FUNC_CAST(__serpent_decrypt));
+				  GLUE_FUNC_CAST(serpent_dec_blk));
 }
 EXPORT_SYMBOL_GPL(serpent_xts_dec);
 
@@ -101,7 +101,7 @@ static const struct common_glue_ctx serpent_enc = {
 		.fn_u = { .ecb = GLUE_FUNC_CAST(serpent_ecb_enc_8way_neon) }
 	}, {
 		.num_blocks = 1,
-		.fn_u = { .ecb = GLUE_FUNC_CAST(__serpent_encrypt) }
+		.fn_u = { .ecb = GLUE_FUNC_CAST(serpent_enc_blk) }
 	} }
 };
 
@@ -140,7 +140,7 @@ static const struct common_glue_ctx serpent_dec = {
 		.fn_u = { .ecb = GLUE_FUNC_CAST(serpent_ecb_dec_8way_neon) }
 	}, {
 		.num_blocks = 1,
-		.fn_u = { .ecb = GLUE_FUNC_CAST(__serpent_decrypt) }
+		.fn_u = { .ecb = GLUE_FUNC_CAST(serpent_dec_blk) }
 	} }
 };
 
@@ -153,7 +153,7 @@ static const struct common_glue_ctx serpent_dec_cbc = {
 		.fn_u = { .cbc = GLUE_CBC_FUNC_CAST(serpent_cbc_dec_8way_neon) }
 	}, {
 		.num_blocks = 1,
-		.fn_u = { .cbc = GLUE_CBC_FUNC_CAST(__serpent_decrypt) }
+		.fn_u = { .cbc = GLUE_CBC_FUNC_CAST(serpent_dec_blk) }
 	} }
 };
 
@@ -185,7 +185,7 @@ static int ecb_decrypt(struct blkcipher_desc *desc, struct scatterlist *dst,
 static int cbc_encrypt(struct blkcipher_desc *desc, struct scatterlist *dst,
 		       struct scatterlist *src, unsigned int nbytes)
 {
-	return glue_cbc_encrypt_128bit(GLUE_FUNC_CAST(__serpent_encrypt), desc,
+	return glue_cbc_encrypt_128bit(GLUE_FUNC_CAST(serpent_enc_blk), desc,
 				     dst, src, nbytes);
 }
 
@@ -232,7 +232,7 @@ static void encrypt_callback(void *priv, u8 *srcdst, unsigned int nbytes)
 	}
 
 	for (i = 0; i < nbytes / bsize; i++, srcdst += bsize)
-		__serpent_encrypt(ctx->ctx, srcdst, srcdst);
+		serpent_enc_blk(ctx->ctx, srcdst, srcdst);
 }
 
 static void decrypt_callback(void *priv, u8 *srcdst, unsigned int nbytes)
@@ -249,7 +249,7 @@ static void decrypt_callback(void *priv, u8 *srcdst, unsigned int nbytes)
 	}
 
 	for (i = 0; i < nbytes / bsize; i++, srcdst += bsize)
-		__serpent_decrypt(ctx->ctx, srcdst, srcdst);
+		serpent_dec_blk(ctx->ctx, srcdst, srcdst);
 }
 
 int lrw_serpent_setkey(struct crypto_tfm *tfm, const u8 *key,
@@ -359,7 +359,7 @@ static int xts_encrypt(struct blkcipher_desc *desc, struct scatterlist *dst,
 	struct serpent_xts_ctx *ctx = crypto_blkcipher_ctx(desc->tfm);
 
 	return glue_xts_crypt_128bit(&serpent_enc_xts, desc, dst, src, nbytes,
-				     XTS_TWEAK_CAST(__serpent_encrypt),
+				     XTS_TWEAK_CAST(serpent_enc_blk),
 				     &ctx->tweak_ctx, &ctx->crypt_ctx);
 }
 
@@ -369,7 +369,7 @@ static int xts_decrypt(struct blkcipher_desc *desc, struct scatterlist *dst,
 	struct serpent_xts_ctx *ctx = crypto_blkcipher_ctx(desc->tfm);
 
 	return glue_xts_crypt_128bit(&serpent_dec_xts, desc, dst, src, nbytes,
-				     XTS_TWEAK_CAST(__serpent_encrypt),
+				     XTS_TWEAK_CAST(serpent_enc_blk),
 				     &ctx->tweak_ctx, &ctx->crypt_ctx);
 }
 

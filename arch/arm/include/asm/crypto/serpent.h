@@ -34,6 +34,9 @@ asmlinkage void serpent_xts_dec_8way_avx(struct serpent_ctx *ctx, u8 *dst,
 extern void __serpent_crypt_ctr(void *ctx, u128 *dst, const u128 *src,
 				le128 *iv);
 
+extern void serpent_enc_blk(void *ctx, u8 *dst, const u8 *src);
+extern void serpent_dec_blk(void *ctx, u8 *dst, const u8 *src);
+
 extern void serpent_xts_enc(void *ctx, u128 *dst, const u128 *src, le128 *iv);
 extern void serpent_xts_dec(void *ctx, u128 *dst, const u128 *src, le128 *iv);
 

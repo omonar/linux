@@ -1306,7 +1306,7 @@ config CRYPTO_SERPENT_ARM
 	select CRYPTO_ALGAPI
 	select CRYPTO_SERPENT
 	help
-	  Use optimized AES assembler routines for ARM platforms.
+	  Use optimized Serpent assembler routines for ARM platforms.
 
 	  Serpent cipher algorithm, by Anderson, Biham & Knudsen.
 
@@ -1435,7 +1435,7 @@ config CRYPTO_TWOFISH_ARM_NEON
 	  16 round block cipher supporting key sizes of 128, 192, and 256
 	  bits.
 
-	  This module provides Twofish cipher algorithm that processes eigth
+	  This module provides Twofish cipher algorithm that processes eight
 	  blocks parallel using NEON instruction set.
 
 	  See also:
