@@ -1417,7 +1417,7 @@ config CRYPTO_TWOFISH_ARM
 
 config CRYPTO_TWOFISH_ARM_NEON
 	tristate "Twofish cipher algorithms (ARM-NEON)"
-	depends on ARM && KERNEL_MODE_NEON
+	depends on ARM && KERNEL_MODE_NEON && !CPU_BIG_ENDIAN
 	select CRYPTO_ALGAPI
 	select CRYPTO_TWOFISH_ARM
 	select CRYPTO_ABLK_HELPER
