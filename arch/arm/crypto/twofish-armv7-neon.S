@@ -543,7 +543,7 @@ __twofish_dec_blk8_neon:
 	add	r9, sp, #0;
 	add	r10, CTXs3, #(w + 4*4 - s3);
 	add	r11, sp, #16;
-	add	r12, CTXs3, #(k - s3 + 8 * 14);
+	add	RROUND, CTXs3, #(k - s3 + 8 * 14);
 
 	/* Load whitening key */
 	vld1.32 {RT0}, [r10];
