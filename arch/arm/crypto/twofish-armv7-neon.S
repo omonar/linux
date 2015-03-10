@@ -117,9 +117,11 @@
 	veor a2, a2, t2;	veor b2, b2, t2; \
 	veor a3, a3, t0;	veor b3, b3, t0;
 
+#ifdef __ARMEL__
 #define T_TABLE_LOOKUP(rt, a, b, x, y, na, t0, t1, t2, t3) \
 	/* Store b */ \
-	vst1.8 {b}, [rt]; \
+	vst1.32 {b}, [rt]; \
+	\
 	/* Load a */ \
 	ldrb r4, [rt, #16]; \
 	ldrb r5, [rt, #20]; \
@@ -157,7 +159,7 @@
 	\
 	/* Store next a */ \
 	add r4, rt, #16; \
-	vst1.8 {na}, [r4]; \
+	vst1.32 {na}, [r4]; \
 	\
 	/* Load b */ \
 	ldrb r4, [rt, #0]; \
@@ -193,6 +195,85 @@
 	vld1.32 {t2##d1[1]}, [r9];	veor y, t0, t1; \
 	vld1.32 {t3##d1[0]}, [r10];	veor y,  y, t2; \
 	vld1.32 {t3##d1[1]}, [r11];	veor y,  y, t3;
+#else
+#define T_TABLE_LOOKUP(rt, a, b, x, y, na, t0, t1, t2, t3) \
+	/* Store b */ \
+	vst1.32 {b}, [rt]; \
+	\
+	/* Load a */ \
+	ldrb r4, [rt, #16]; \
+	ldrb r5, [rt, #20]; \
+	ldrb r6, [rt, #17]; \
+	ldrb r7, [rt, #21];		add r4, CTXs3, r4, lsl #2; \
+	ldrb r8, [rt, #18];		add r5, CTXs3, r5, lsl #2; \
+	ldrb r9, [rt, #22];		add r6, CTXs2, r6, lsl #2; \
+	ldrb r10, [rt, #19];		add r7, CTXs2, r7, lsl #2; \
+	ldrb r11, [rt, #23];		add r8, CTXs1, r8, lsl #2; \
+	vld1.32 {t0##d0[0]}, [r4];	add r9, CTXs1, r9, lsl #2; \
+	vld1.32 {t0##d0[1]}, [r5];	add r10, CTXs0, r10, lsl #2; \
+	vld1.32 {t1##d0[0]}, [r6];	add r11, CTXs0, r11, lsl #2; \
+	vld1.32 {t1##d0[1]}, [r7]; \
+	vld1.32 {t2##d0[0]}, [r8]; \
+	vld1.32 {t2##d0[1]}, [r9]; \
+	vld1.32 {t3##d0[0]}, [r10]; \
+	vld1.32 {t3##d0[1]}, [r11]; \
+	\
+	ldrb r4, [rt, #24]; \
+	ldrb r5, [rt, #28]; \
+	ldrb r6, [rt, #25]; \
+	ldrb r7, [rt, #29];		add r4, CTXs3, r4, lsl #2; \
+	ldrb r8, [rt, #26];		add r5, CTXs3, r5, lsl #2; \
+	ldrb r9, [rt, #30];		add r6, CTXs2, r6, lsl #2; \
+	ldrb r10, [rt, #27];		add r7, CTXs2, r7, lsl #2; \
+	ldrb r11, [rt, #31];		add r8, CTXs1, r8, lsl #2; \
+	vld1.32 {t0##d1[0]}, [r4];	add r9, CTXs1, r9, lsl #2; \
+	vld1.32 {t0##d1[1]}, [r5];	add r10, CTXs0, r10, lsl #2; \
+	vld1.32 {t1##d1[0]}, [r6];	add r11, CTXs0, r11, lsl #2; \
+	vld1.32 {t1##d1[1]}, [r7]; \
+	vld1.32 {t2##d1[0]}, [r8]; \
+	vld1.32 {t2##d1[1]}, [r9];	veor x, t0, t1; \
+	vld1.32 {t3##d1[0]}, [r10];	veor x,  x, t2; \
+	vld1.32 {t3##d1[1]}, [r11];	veor x,  x, t3; \
+	\
+	/* Store next a */ \
+	add r4, rt, #16; \
+	vst1.32 {na}, [r4]; \
+	\
+	/* Load b */ \
+	ldrb r4, [rt, #0]; \
+	ldrb r5, [rt, #4]; \
+	ldrb r6, [rt, #1]; \
+	ldrb r7, [rt, #5];		add r4, CTXs0, r4, lsl #2; \
+	ldrb r8, [rt, #2];		add r5, CTXs0, r5, lsl #2; \
+	ldrb r9, [rt, #6];		add r6, CTXs3, r6, lsl #2; \
+	ldrb r10, [rt, #3];		add r7, CTXs3, r7, lsl #2; \
+	ldrb r11, [rt, #7];		add r8, CTXs2, r8, lsl #2; \
+	vld1.32 {t0##d0[0]}, [r4];	add r9, CTXs2, r9, lsl #2; \
+	vld1.32 {t0##d0[1]}, [r5];	add r10, CTXs1, r10, lsl #2; \
+	vld1.32 {t1##d0[0]}, [r6];	add r11, CTXs1, r11, lsl #2; \
+	vld1.32 {t1##d0[1]}, [r7]; \
+	vld1.32 {t2##d0[0]}, [r8]; \
+	vld1.32 {t2##d0[1]}, [r9]; \
+	vld1.32 {t3##d0[0]}, [r10]; \
+	vld1.32 {t3##d0[1]}, [r11]; \
+	\
+	ldrb r4, [rt, #8]; \
+	ldrb r5, [rt, #12]; \
+	ldrb r6, [rt, #9]; \
+	ldrb r7, [rt, #13];		add r4, CTXs0, r4, lsl #2; \
+	ldrb r8, [rt, #10];		add r5, CTXs0, r5, lsl #2; \
+	ldrb r9, [rt, #14];		add r6, CTXs3, r6, lsl #2; \
+	ldrb r10, [rt, #11];		add r7, CTXs3, r7, lsl #2; \
+	ldrb r11, [rt, #15];		add r8, CTXs2, r8, lsl #2; \
+	vld1.32 {t0##d1[0]}, [r4];	add r9, CTXs2, r9, lsl #2; \
+	vld1.32 {t0##d1[1]}, [r5];	add r10, CTXs1, r10, lsl #2; \
+	vld1.32 {t1##d1[0]}, [r6];	add r11, CTXs1, r11, lsl #2; \
+	vld1.32 {t1##d1[1]}, [r7]; \
+	vld1.32 {t2##d1[0]}, [r8]; \
+	vld1.32 {t2##d1[1]}, [r9];	veor y, t0, t1; \
+	vld1.32 {t3##d1[0]}, [r10];	veor y,  y, t2; \
+	vld1.32 {t3##d1[1]}, [r11];	veor y,  y, t3;
+#endif
 
 /* Apply a Twofish round to eight parallel blocks */
 #define ENCRYPT_ROUND(n, x, y, c, d, rk, t0, t1, t2, t3) \
@@ -268,6 +349,13 @@ __twofish_enc_blk8_neon:
 	add	CTXs1, CTXs0, #(s1 - s0);
 	add	CTXs2, CTXs0, #(s2 - s0);
 
+#ifndef __ARMEL__
+	vrev32.8 RA0, RA0;	vrev32.8 RB0, RB0;
+	vrev32.8 RA1, RA1;	vrev32.8 RB1, RB1;
+	vrev32.8 RA2, RA2;	vrev32.8 RB2, RB2;
+	vrev32.8 RA3, RA3;	vrev32.8 RB3, RB3;
+#endif
+
 	transpose_4x4(RA0, RA1, RA2, RA3);
 	transpose_4x4(RB0, RB1, RB2, RB3);
 
@@ -283,7 +371,7 @@ __twofish_enc_blk8_neon:
 	veor RA0, RA0, RT3;	veor RB0, RB0, RT3;
 
 	/* Store a */
-	vst1.8 {RA0}, [r11];
+	vst1.32 {RA0}, [r11];
 
 	vdup.32 RT1, RT0d0[1];
 	vdup.32 RT2, RT0d1[0];
@@ -397,14 +485,21 @@ __twofish_enc_blk8_neon:
 	/* Clear data on stack */
 	veor RX, RA0, RA0;
 	veor RY, RA1, RA1;
-	vst1.8 {RX}, [sp]!;
-	vst1.8 {RY}, [sp]!;
+	vst1.64 {RX}, [sp]!;
+	vst1.64 {RY}, [sp]!;
 
 	/* Output whitening */
 	BLOCK_XOR_KEY(RA2, RA3, RA0, RA1, RB2, RB3, RB0, RB1, RT0, RT1, RT2, RT3);
 
 	transpose_4x4(RA2, RA3, RA0, RA1);
 	transpose_4x4(RB2, RB3, RB0, RB1);
+
+#ifndef __ARMEL__
+	vrev32.8 RA2, RA2;	vrev32.8 RB2, RB2;
+	vrev32.8 RA3, RA3;	vrev32.8 RB3, RB3;
+	vrev32.8 RA0, RA0;	vrev32.8 RB0, RB0;
+	vrev32.8 RA1, RA1;	vrev32.8 RB1, RB1;
+#endif
 
 	bx lr;
 .size __twofish_enc_blk8_neon,.-__twofish_enc_blk8_neon
@@ -429,6 +524,13 @@ __twofish_dec_blk8_neon:
 	add	CTXs1, CTXs0, #(s1 - s0);
 	add	CTXs2, CTXs0, #(s2 - s0);
 
+#ifndef __ARMEL__
+	vrev32.8 RA2, RA2;	vrev32.8 RB2, RB2;
+	vrev32.8 RA3, RA3;	vrev32.8 RB3, RB3;
+	vrev32.8 RA0, RA0;	vrev32.8 RB0, RB0;
+	vrev32.8 RA1, RA1;	vrev32.8 RB1, RB1;
+#endif
+
 	transpose_4x4(RA2, RA3, RA0, RA1);
 	transpose_4x4(RB2, RB3, RB0, RB1);
 
@@ -443,7 +545,7 @@ __twofish_dec_blk8_neon:
 	veor RA2, RA2, RT3;	veor RB2, RB2, RT3;
 
 	/* Store a */
-	vst1.8 {RA2}, [r11];
+	vst1.32 {RA2}, [r11];
 
 	vdup.32 RT1, RT0d0[1];
 	vdup.32 RT2, RT0d1[0];
@@ -570,14 +672,21 @@ __twofish_dec_blk8_neon:
 	/* Clear data on stack */
 	veor RX, RA2, RA2;
 	veor RY, RA3, RA3;
-	vst1.8 {RX}, [sp]!;
-	vst1.8 {RY}, [sp]!;
+	vst1.64 {RX}, [sp]!;
+	vst1.64 {RY}, [sp]!;
 
 	/* Output whitening */
 	BLOCK_XOR_KEY(RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3, RT0, RT1, RT2, RT3);
 
 	transpose_4x4(RA0, RA1, RA2, RA3);
 	transpose_4x4(RB0, RB1, RB2, RB3);
+
+#ifndef __ARMEL__
+	vrev32.8 RA0, RA0;	vrev32.8 RB0, RB0;
+	vrev32.8 RA1, RA1;	vrev32.8 RB1, RB1;
+	vrev32.8 RA2, RA2;	vrev32.8 RB2, RB2;
+	vrev32.8 RA3, RA3;	vrev32.8 RB3, RB3;
+#endif
 
 	bx lr;
 .size __twofish_dec_blk8_neon,.-__twofish_dec_blk8_neon
