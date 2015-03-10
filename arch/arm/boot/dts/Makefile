@@ -77,14 +77,17 @@ dtb-$(RPI_DT_OVERLAYS) += hy28b-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += iqaudio-dac-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += iqaudio-dacplus-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += lirc-rpi-overlay.dtb
+dtb-$(RPI_DT_OVERLAYS) += mz61581-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += pcf2127-rtc-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += pcf8523-rtc-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += piscreen-overlay.dtb
+dtb-$(RPI_DT_OVERLAYS) += pitft28-resistive-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += pps-gpio-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += rpi-display-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += w1-gpio-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += w1-gpio-pullup-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += spi-bcm2835-overlay.dtb
+dtb-$(RPI_DT_OVERLAYS) += mcp2515-can0-overlay.dtb
 dtb-$(CONFIG_ARCH_BCM2835) += bcm2835-rpi-b.dtb
 
 dtb-$(CONFIG_ARCH_BCM_5301X) += bcm4708-netgear-r6250.dtb
