@@ -39,7 +39,7 @@
 #define CTXs2  r2
 #define CTXs3  r3
 
-#define RROUND r12
+#define RROUND lr
 
 /* NEON vector registers */
 #define RA0 q0
@@ -158,7 +158,7 @@
 	vld1.32 {t3##d1[1]}, [r11];	veor x,  x, t3; \
 	\
 	/* Store next a */ \
-	vst1.32 {na}, [rt]; \
+	vst1.32 {na}, [rt, :128]; \
 	\
 	/* Load b */ \
 	ldrb r4, [rt, #16]; \
@@ -197,7 +197,7 @@
 	\
 	/* Store next b */ \
 	add r4, rt, #16; \
-	vst1.32 {nb}, [r4];
+	vst1.32 {nb}, [r4, :128];
 #else
 #define T_TABLE_LOOKUP(rt, a, b, x, y, na, nb, t0, t1, t2, t3) \
 	/* Load a */ \
@@ -236,7 +236,7 @@
 	vld1.32 {t3##d1[1]}, [r11];	veor x,  x, t3; \
 	\
 	/* Store next a */ \
-	vst1.32 {na}, [rt]; \
+	vst1.32 {na}, [rt, :128]; \
 	\
 	/* Load b */ \
 	ldrb r4, [rt, #16]; \
@@ -275,7 +275,7 @@
 	\
 	/* Store next b */ \
 	add r4, rt, #16; \
-	vst1.32 {nb}, [r4];
+	vst1.32 {nb}, [r4, :128];
 #endif
 
 /* Apply a Twofish round to eight parallel blocks */
@@ -344,8 +344,12 @@ __twofish_enc_blk8_neon:
 	 * 						ciphertext blocks
 	 */
 
+	push	{lr};
+	mov	r12, sp;
+
 	/* Allocate space for a and b */
 	sub	sp, sp, #2*4*4;
+	bic	sp, #0x0f;
 
 	/* Calculate table pointers */
 	add	CTXs3, CTXs0, #(s3 - s0);
@@ -376,9 +380,9 @@ __twofish_enc_blk8_neon:
 	veor RA0, RA0, RT3;	veor RB0, RB0, RT3;
 	veor RA1, RA1, RT1;	veor RB1, RB1, RT1;
 
-	/* Store a */
-	vst1.32 {RA0}, [r9];
-	vst1.32 {RA1}, [r11];
+	/* Store a and b */
+	vst1.32 {RA0}, [r9, :128];
+	vst1.32 {RA1}, [r11, :128];
 
 	vdup.32 RT2, RT0d1[0];
 	vdup.32 RT0, RT0d1[1];
@@ -481,6 +485,9 @@ __twofish_enc_blk8_neon:
 	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(14, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
+	/* Load pointer to whitening key */
+	add	RROUND, CTXs3, #(w + 4*4 - s3);
+
 	/* During last round we wipe data on stack using RT5 */
 	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(15, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
@@ -488,8 +495,7 @@ __twofish_enc_blk8_neon:
 	ENCRYPT_ROUND(15, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	/* Load whitening key */
-	add	r4, CTXs3, #(w + 4*4 - s3);
-	vld1.32 {RT0}, [r4];
+	vld1.32 {RT0}, [RROUND];
 
 	/* Output whitening */
 	BLOCK_XOR_KEY(RA2, RA3, RA0, RA1, RB2, RB3, RB0, RB1, RT0, RT1, RT2, RT3);
@@ -505,7 +511,8 @@ __twofish_enc_blk8_neon:
 #endif
 
 	/* Restore stack pointer */
-	add	sp, sp, #2*4*4;
+	mov	sp, r12;
+	pop	{lr};
 
 	bx lr;
 .size __twofish_enc_blk8_neon,.-__twofish_enc_blk8_neon
@@ -522,8 +529,12 @@ __twofish_dec_blk8_neon:
 	 *						blocks
 	 */
 
+	push	{lr};
+	mov	r12, sp;
+
 	/* Allocate space for a and b */
 	sub	sp, sp, #2*4*4;
+	bic	sp, #0x0f;
 
 	/* Calculate table pointers */
 	add	CTXs3, CTXs0, #(s3 - s0);
@@ -554,8 +565,8 @@ __twofish_dec_blk8_neon:
 	veor RA3, RA3, RT1;	veor RB3, RB3, RT1;
 
 	/* Store a and b */
-	vst1.32 {RA2}, [r9];
-	vst1.32 {RA3}, [r11];
+	vst1.32 {RA2}, [r9, :128];
+	vst1.32 {RA3}, [r11, :128];
 
 	vdup.32 RT2, RT0d1[0];
 	vdup.32 RT0, RT0d1[1];
@@ -671,6 +682,9 @@ __twofish_dec_blk8_neon:
 	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(1, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
+	/* Load pointer to whitening key */
+	add	RROUND, CTXs3, #(w - s3);
+
 	/* During last round we wipe data on stack using RT5 */
 	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(0, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
@@ -678,8 +692,7 @@ __twofish_dec_blk8_neon:
 	DECRYPT_ROUND(0, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
 	/* Load whitening key */
-	add	r4, CTXs3, #(w - s3);
-	vld1.32 {RT0}, [r4];
+	vld1.32 {RT0}, [RROUND];
 
 	/* Output whitening */
 	BLOCK_XOR_KEY(RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3, RT0, RT1, RT2, RT3);
@@ -695,7 +708,8 @@ __twofish_dec_blk8_neon:
 #endif
 
 	/* Restore stack pointer */
-	add	sp, sp, #2*4*4;
+	mov	sp, r12;
+	pop	{lr};
 
 	bx lr;
 .size __twofish_dec_blk8_neon,.-__twofish_dec_blk8_neon
