@@ -40,6 +40,19 @@
 #include <asm/crypto/twofish.h>
 #include <asm/crypto/glue_helper.h>
 
+#define TWOFISH_PARALLEL_BLOCKS 8
+#define TWOFISH_NEON_ALIGN      8
+
+struct twofish_lrw_ctx {
+	struct lrw_table_ctx lrw_table;
+	u8 raw_tf_ctx[sizeof(struct twofish_ctx) + TWOFISH_NEON_ALIGN - 1];
+};
+
+struct twofish_xts_ctx {
+	u8 raw_tweak_ctx[sizeof(struct twofish_ctx) + TWOFISH_NEON_ALIGN - 1];
+	u8 raw_crypt_ctx[sizeof(struct twofish_ctx) + TWOFISH_NEON_ALIGN - 1];
+};
+
 /* 8-way parallel cipher functions */
 asmlinkage void twofish_ecb_enc_8way_neon(struct twofish_ctx *ctx, u8 *dst,
 					 const u8 *src);
@@ -64,6 +77,35 @@ EXPORT_SYMBOL_GPL(twofish_xts_enc_8way_neon);
 asmlinkage void twofish_xts_dec_8way_neon(struct twofish_ctx *ctx, u8 *dst,
 					 const u8 *src, le128 *iv);
 EXPORT_SYMBOL_GPL(twofish_xts_dec_8way_neon);
+
+static inline struct twofish_ctx *tf_ctx_aligned(void *raw_ctx)
+{
+	unsigned long addr = (unsigned long)raw_ctx;
+	unsigned long align = TWOFISH_NEON_ALIGN;
+
+	return (struct twofish_ctx *)ALIGN(addr, align);
+}
+
+static int __twofish_setkey_neon(struct crypto_tfm *tfm, void *raw_ctx,
+				  const u8 *key, unsigned int keylen)
+{
+	struct twofish_ctx *ctx = tf_ctx_aligned(raw_ctx);
+	u32 *flags = &tfm->crt_flags;
+
+	if (keylen % 8)
+	{
+		*flags |= CRYPTO_TFM_RES_BAD_KEY_LEN;
+		return -EINVAL;
+	}
+
+	return __twofish_setkey(ctx, key, keylen, flags);
+}
+
+static int twofish_setkey_neon(struct crypto_tfm *tfm, const u8 *key,
+			       unsigned int keylen)
+{
+	return __twofish_setkey_neon(tfm, crypto_tfm_ctx(tfm), key, keylen);
+}
 
 void __twofish_crypt_ctr(void *ctx, u128 *dst, const u128 *src, le128 *iv)
 {
@@ -173,33 +215,33 @@ static const struct common_glue_ctx twofish_dec_xts = {
 static int ecb_encrypt(struct blkcipher_desc *desc, struct scatterlist *dst,
 		       struct scatterlist *src, unsigned int nbytes)
 {
-	return glue_ecb_crypt_128bit(&twofish_enc, desc, dst, src, nbytes);
+	return glue_ecb_crypt_128bit_aligned(&twofish_enc, desc, dst, src, nbytes);
 }
 
 static int ecb_decrypt(struct blkcipher_desc *desc, struct scatterlist *dst,
 		       struct scatterlist *src, unsigned int nbytes)
 {
-	return glue_ecb_crypt_128bit(&twofish_dec, desc, dst, src, nbytes);
+	return glue_ecb_crypt_128bit_aligned(&twofish_dec, desc, dst, src, nbytes);
 }
 
 static int cbc_encrypt(struct blkcipher_desc *desc, struct scatterlist *dst,
 		       struct scatterlist *src, unsigned int nbytes)
 {
-	return glue_cbc_encrypt_128bit(GLUE_FUNC_CAST(twofish_enc_blk), desc,
+	return glue_cbc_encrypt_128bit_aligned(GLUE_FUNC_CAST(twofish_enc_blk), desc,
 				     dst, src, nbytes);
 }
 
 static int cbc_decrypt(struct blkcipher_desc *desc, struct scatterlist *dst,
 		       struct scatterlist *src, unsigned int nbytes)
 {
-	return glue_cbc_decrypt_128bit(&twofish_dec_cbc, desc, dst, src,
+	return glue_cbc_decrypt_128bit_aligned(&twofish_dec_cbc, desc, dst, src,
 				       nbytes);
 }
 
 static int ctr_crypt(struct blkcipher_desc *desc, struct scatterlist *dst,
 		     struct scatterlist *src, unsigned int nbytes)
 {
-	return glue_ctr_crypt_128bit(&twofish_ctr, desc, dst, src, nbytes);
+	return glue_ctr_crypt_128bit_aligned(&twofish_ctr, desc, dst, src, nbytes);
 }
 
 static inline bool twofish_fpu_begin(bool fpu_enabled, unsigned int nbytes)
@@ -256,11 +298,10 @@ int lrw_twofish_setkey(struct crypto_tfm *tfm, const u8 *key,
 		       unsigned int keylen)
 {
 	struct twofish_lrw_ctx *ctx = crypto_tfm_ctx(tfm);
-	u32 *flags = &tfm->crt_flags;
 	int err;
 
-	err = __twofish_setkey(&ctx->twofish_ctx, key, keylen -
-							TF_BLOCK_SIZE, flags);
+	err = __twofish_setkey_neon(tfm, ctx->raw_tf_ctx, key,
+				     keylen - TF_BLOCK_SIZE);
 	if (err)
 		return err;
 
@@ -275,7 +316,7 @@ static int lrw_encrypt(struct blkcipher_desc *desc, struct scatterlist *dst,
 	struct twofish_lrw_ctx *ctx = crypto_blkcipher_ctx(desc->tfm);
 	be128 buf[TWOFISH_PARALLEL_BLOCKS];
 	struct crypt_priv crypt_ctx = {
-		.ctx = &ctx->twofish_ctx,
+		.ctx = tf_ctx_aligned(ctx->raw_tf_ctx),
 		.fpu_enabled = false,
 	};
 	struct lrw_crypt_req req = {
@@ -301,7 +342,7 @@ static int lrw_decrypt(struct blkcipher_desc *desc, struct scatterlist *dst,
 	struct twofish_lrw_ctx *ctx = crypto_blkcipher_ctx(desc->tfm);
 	be128 buf[TWOFISH_PARALLEL_BLOCKS];
 	struct crypt_priv crypt_ctx = {
-		.ctx = &ctx->twofish_ctx,
+		.ctx = tf_ctx_aligned(ctx->raw_tf_ctx),
 		.fpu_enabled = false,
 	};
 	struct lrw_crypt_req req = {
@@ -345,12 +386,13 @@ int xts_twofish_setkey(struct crypto_tfm *tfm, const u8 *key,
 	}
 
 	/* first half of xts-key is for crypt */
-	err = __twofish_setkey(&ctx->crypt_ctx, key, keylen / 2, flags);
+	err = __twofish_setkey_neon(tfm, ctx->raw_crypt_ctx, key, keylen / 2);
 	if (err)
 		return err;
 
 	/* second half of xts-key is for tweak */
-	return __twofish_setkey(&ctx->tweak_ctx, key + keylen / 2, keylen / 2, flags);
+	return __twofish_setkey_neon(tfm, ctx->raw_tweak_ctx, key + keylen / 2,
+				     keylen / 2);
 }
 EXPORT_SYMBOL_GPL(xts_twofish_setkey);
 
@@ -361,7 +403,8 @@ static int xts_encrypt(struct blkcipher_desc *desc, struct scatterlist *dst,
 
 	return glue_xts_crypt_128bit(&twofish_enc_xts, desc, dst, src, nbytes,
 				     XTS_TWEAK_CAST(twofish_enc_blk),
-				     &ctx->tweak_ctx, &ctx->crypt_ctx);
+				     tf_ctx_aligned(ctx->raw_tweak_ctx),
+				     tf_ctx_aligned(ctx->raw_crypt_ctx));
 }
 
 static int xts_decrypt(struct blkcipher_desc *desc, struct scatterlist *dst,
@@ -371,7 +414,8 @@ static int xts_decrypt(struct blkcipher_desc *desc, struct scatterlist *dst,
 
 	return glue_xts_crypt_128bit(&twofish_dec_xts, desc, dst, src, nbytes,
 				     XTS_TWEAK_CAST(twofish_enc_blk),
-				     &ctx->tweak_ctx, &ctx->crypt_ctx);
+				     tf_ctx_aligned(ctx->raw_tweak_ctx),
+				     tf_ctx_aligned(ctx->raw_crypt_ctx));
 }
 
 static struct crypto_alg twofish_algs[10] = { {
@@ -380,15 +424,16 @@ static struct crypto_alg twofish_algs[10] = { {
 	.cra_priority		= 0,
 	.cra_flags		= CRYPTO_ALG_TYPE_BLKCIPHER,
 	.cra_blocksize		= TF_BLOCK_SIZE,
-	.cra_ctxsize		= sizeof(struct twofish_ctx),
-	.cra_alignmask		= 7,
+	.cra_ctxsize		= sizeof(struct twofish_ctx) +
+				  TWOFISH_NEON_ALIGN - 1,
+	.cra_alignmask		= TWOFISH_NEON_ALIGN - 1,
 	.cra_type		= &crypto_blkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_u = {
 		.blkcipher = {
 			.min_keysize	= TF_MIN_KEY_SIZE,
 			.max_keysize	= TF_MAX_KEY_SIZE,
-			.setkey		= twofish_setkey,
+			.setkey		= twofish_setkey_neon,
 			.encrypt	= ecb_encrypt,
 			.decrypt	= ecb_decrypt,
 		},
@@ -399,15 +444,16 @@ static struct crypto_alg twofish_algs[10] = { {
 	.cra_priority		= 0,
 	.cra_flags		= CRYPTO_ALG_TYPE_BLKCIPHER,
 	.cra_blocksize		= TF_BLOCK_SIZE,
-	.cra_ctxsize		= sizeof(struct twofish_ctx),
-	.cra_alignmask		= 7,
+	.cra_ctxsize		= sizeof(struct twofish_ctx) +
+				  TWOFISH_NEON_ALIGN - 1,
+	.cra_alignmask		= TWOFISH_NEON_ALIGN - 1,
 	.cra_type		= &crypto_blkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_u = {
 		.blkcipher = {
 			.min_keysize	= TF_MIN_KEY_SIZE,
 			.max_keysize	= TF_MAX_KEY_SIZE,
-			.setkey		= twofish_setkey,
+			.setkey		= twofish_setkey_neon,
 			.encrypt	= cbc_encrypt,
 			.decrypt	= cbc_decrypt,
 		},
@@ -418,8 +464,9 @@ static struct crypto_alg twofish_algs[10] = { {
 	.cra_priority		= 0,
 	.cra_flags		= CRYPTO_ALG_TYPE_BLKCIPHER,
 	.cra_blocksize		= 1,
-	.cra_ctxsize		= sizeof(struct twofish_ctx),
-	.cra_alignmask		= 7,
+	.cra_ctxsize		= sizeof(struct twofish_ctx) +
+				  TWOFISH_NEON_ALIGN - 1,
+	.cra_alignmask		= TWOFISH_NEON_ALIGN - 1,
 	.cra_type		= &crypto_blkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_u = {
@@ -427,7 +474,7 @@ static struct crypto_alg twofish_algs[10] = { {
 			.min_keysize	= TF_MIN_KEY_SIZE,
 			.max_keysize	= TF_MAX_KEY_SIZE,
 			.ivsize		= TF_BLOCK_SIZE,
-			.setkey		= twofish_setkey,
+			.setkey		= twofish_setkey_neon,
 			.encrypt	= ctr_crypt,
 			.decrypt	= ctr_crypt,
 		},
@@ -439,7 +486,7 @@ static struct crypto_alg twofish_algs[10] = { {
 	.cra_flags		= CRYPTO_ALG_TYPE_BLKCIPHER,
 	.cra_blocksize		= TF_BLOCK_SIZE,
 	.cra_ctxsize		= sizeof(struct twofish_lrw_ctx),
-	.cra_alignmask		= 7,
+	.cra_alignmask		= TWOFISH_NEON_ALIGN - 1,
 	.cra_type		= &crypto_blkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_exit		= lrw_twofish_exit_tfm,
@@ -462,7 +509,7 @@ static struct crypto_alg twofish_algs[10] = { {
 	.cra_flags		= CRYPTO_ALG_TYPE_BLKCIPHER,
 	.cra_blocksize		= TF_BLOCK_SIZE,
 	.cra_ctxsize		= sizeof(struct twofish_xts_ctx),
-	.cra_alignmask		= 7,
+	.cra_alignmask		= TWOFISH_NEON_ALIGN - 1,
 	.cra_type		= &crypto_blkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_u = {
@@ -482,7 +529,7 @@ static struct crypto_alg twofish_algs[10] = { {
 	.cra_flags		= CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 	.cra_blocksize		= TF_BLOCK_SIZE,
 	.cra_ctxsize		= sizeof(struct async_helper_ctx),
-	.cra_alignmask		= 7,
+	.cra_alignmask		= TWOFISH_NEON_ALIGN - 1,
 	.cra_type		= &crypto_ablkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_init		= ablk_init,
@@ -503,7 +550,7 @@ static struct crypto_alg twofish_algs[10] = { {
 	.cra_flags		= CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 	.cra_blocksize		= TF_BLOCK_SIZE,
 	.cra_ctxsize		= sizeof(struct async_helper_ctx),
-	.cra_alignmask		= 7,
+	.cra_alignmask		= TWOFISH_NEON_ALIGN - 1,
 	.cra_type		= &crypto_ablkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_init		= ablk_init,
@@ -525,7 +572,7 @@ static struct crypto_alg twofish_algs[10] = { {
 	.cra_flags		= CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 	.cra_blocksize		= 1,
 	.cra_ctxsize		= sizeof(struct async_helper_ctx),
-	.cra_alignmask		= 7,
+	.cra_alignmask		= TWOFISH_NEON_ALIGN - 1,
 	.cra_type		= &crypto_ablkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_init		= ablk_init,
@@ -548,7 +595,7 @@ static struct crypto_alg twofish_algs[10] = { {
 	.cra_flags		= CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 	.cra_blocksize		= TF_BLOCK_SIZE,
 	.cra_ctxsize		= sizeof(struct async_helper_ctx),
-	.cra_alignmask		= 7,
+	.cra_alignmask		= TWOFISH_NEON_ALIGN - 1,
 	.cra_type		= &crypto_ablkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_init		= ablk_init,
@@ -572,7 +619,7 @@ static struct crypto_alg twofish_algs[10] = { {
 	.cra_flags		= CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 	.cra_blocksize		= TF_BLOCK_SIZE,
 	.cra_ctxsize		= sizeof(struct async_helper_ctx),
-	.cra_alignmask		= 7,
+	.cra_alignmask		= TWOFISH_NEON_ALIGN - 1,
 	.cra_type		= &crypto_ablkcipher_type,
 	.cra_module		= THIS_MODULE,
 	.cra_init		= ablk_init,

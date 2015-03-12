@@ -17,6 +17,7 @@
 
 #include <linux/linkage.h>
 #include <asm/assembler.h>
+#include <asm/cache.h>
 
 #include "glue_helper-asm-neon.S"
 
@@ -109,17 +110,6 @@
   8-way twofish
  **********************************************************************/
 
-/* XOR round key into block state in a0,a1,a2,a3. */
-#define BLOCK_XOR_KEY(a0, a1, a2, a3, b0, b1, b2, b3, t0, t1, t2, t3) \
-	vdup.32 t3, t0##d0[0]; \
-	vdup.32 t1, t0##d0[1]; \
-	vdup.32 t2, t0##d1[0]; \
-	vdup.32 t0, t0##d1[1]; \
-	veor a0, a0, t3;	veor b0, b0, t3; \
-	veor a1, a1, t1;	veor b1, b1, t1; \
-	veor a2, a2, t2;	veor b2, b2, t2; \
-	veor a3, a3, t0;	veor b3, b3, t0;
-
 #ifdef __ARMEL__
 #define T_TABLE_LOOKUP(rt, a, b, x, y, na, nb, t0, t1, t2, t3) \
 	/* Load a */ \
@@ -131,14 +121,14 @@
 	ldrb r9, [rt, #6];		add r6, CTXs1, r6, lsl #2; \
 	ldrb r10, [rt, #3];		add r7, CTXs1, r7, lsl #2; \
 	ldrb r11, [rt, #7];		add r8, CTXs2, r8, lsl #2; \
-	vld1.32 {t0##d0[0]}, [r4];	add r9, CTXs2, r9, lsl #2; \
-	vld1.32 {t0##d0[1]}, [r5];	add r10, CTXs3, r10, lsl #2; \
-	vld1.32 {t1##d0[0]}, [r6];	add r11, CTXs3, r11, lsl #2; \
-	vld1.32 {t1##d0[1]}, [r7]; \
-	vld1.32 {t2##d0[0]}, [r8]; \
-	vld1.32 {t2##d0[1]}, [r9]; \
-	vld1.32 {t3##d0[0]}, [r10]; \
-	vld1.32 {t3##d0[1]}, [r11]; \
+	vld1.32 {t0##d0[0]}, [r4,:32];	add r9, CTXs2, r9, lsl #2; \
+	vld1.32 {t0##d0[1]}, [r5,:32];	add r10, CTXs3, r10, lsl #2; \
+	vld1.32 {t1##d0[0]}, [r6,:32];	add r11, CTXs3, r11, lsl #2; \
+	vld1.32 {t1##d0[1]}, [r7,:32]; \
+	vld1.32 {t2##d0[0]}, [r8,:32]; \
+	vld1.32 {t2##d0[1]}, [r9,:32]; \
+	vld1.32 {t3##d0[0]}, [r10,:32]; \
+	vld1.32 {t3##d0[1]}, [r11,:32]; \
 	\
 	ldrb r4, [rt, #8]; \
 	ldrb r5, [rt, #12]; \
@@ -148,14 +138,14 @@
 	ldrb r9, [rt, #14];		add r6, CTXs1, r6, lsl #2; \
 	ldrb r10, [rt, #11];		add r7, CTXs1, r7, lsl #2; \
 	ldrb r11, [rt, #15];		add r8, CTXs2, r8, lsl #2; \
-	vld1.32 {t0##d1[0]}, [r4];	add r9, CTXs2, r9, lsl #2; \
-	vld1.32 {t0##d1[1]}, [r5];	add r10, CTXs3, r10, lsl #2; \
-	vld1.32 {t1##d1[0]}, [r6];	add r11, CTXs3, r11, lsl #2; \
-	vld1.32 {t1##d1[1]}, [r7]; \
-	vld1.32 {t2##d1[0]}, [r8]; \
-	vld1.32 {t2##d1[1]}, [r9];	veor x, t0, t1; \
-	vld1.32 {t3##d1[0]}, [r10];	veor x,  x, t2; \
-	vld1.32 {t3##d1[1]}, [r11];	veor x,  x, t3; \
+	vld1.32 {t0##d1[0]}, [r4,:32];	add r9, CTXs2, r9, lsl #2; \
+	vld1.32 {t0##d1[1]}, [r5,:32];	add r10, CTXs3, r10, lsl #2; \
+	vld1.32 {t1##d1[0]}, [r6,:32];	add r11, CTXs3, r11, lsl #2; \
+	vld1.32 {t1##d1[1]}, [r7,:32]; \
+	vld1.32 {t2##d1[0]}, [r8,:32]; \
+	vld1.32 {t2##d1[1]}, [r9,:32];	veor x, t0, t1; \
+	vld1.32 {t3##d1[0]}, [r10,:32];	veor x,  x, t2; \
+	vld1.32 {t3##d1[1]}, [r11,:32];	veor x,  x, t3; \
 	\
 	/* Store next a */ \
 	vst1.32 {na}, [rt, :128]; \
@@ -169,14 +159,14 @@
 	ldrb r9, [rt, #22];		add r6, CTXs2, r6, lsl #2; \
 	ldrb r10, [rt, #19];		add r7, CTXs2, r7, lsl #2; \
 	ldrb r11, [rt, #23];		add r8, CTXs3, r8, lsl #2; \
-	vld1.32 {t0##d0[0]}, [r4];	add r9, CTXs3, r9, lsl #2; \
-	vld1.32 {t0##d0[1]}, [r5];	add r10, CTXs0, r10, lsl #2; \
-	vld1.32 {t1##d0[0]}, [r6];	add r11, CTXs0, r11, lsl #2; \
-	vld1.32 {t1##d0[1]}, [r7]; \
-	vld1.32 {t2##d0[0]}, [r8]; \
-	vld1.32 {t2##d0[1]}, [r9]; \
-	vld1.32 {t3##d0[0]}, [r10]; \
-	vld1.32 {t3##d0[1]}, [r11]; \
+	vld1.32 {t0##d0[0]}, [r4,:32];	add r9, CTXs3, r9, lsl #2; \
+	vld1.32 {t0##d0[1]}, [r5,:32];	add r10, CTXs0, r10, lsl #2; \
+	vld1.32 {t1##d0[0]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
+	vld1.32 {t1##d0[1]}, [r7,:32]; \
+	vld1.32 {t2##d0[0]}, [r8,:32]; \
+	vld1.32 {t2##d0[1]}, [r9,:32]; \
+	vld1.32 {t3##d0[0]}, [r10,:32]; \
+	vld1.32 {t3##d0[1]}, [r11,:32]; \
 	\
 	ldrb r4, [rt, #24]; \
 	ldrb r5, [rt, #28]; \
@@ -186,14 +176,14 @@
 	ldrb r9, [rt, #30];		add r6, CTXs2, r6, lsl #2; \
 	ldrb r10, [rt, #27];		add r7, CTXs2, r7, lsl #2; \
 	ldrb r11, [rt, #31];		add r8, CTXs3, r8, lsl #2; \
-	vld1.32 {t0##d1[0]}, [r4];	add r9, CTXs3, r9, lsl #2; \
-	vld1.32 {t0##d1[1]}, [r5];	add r10, CTXs0, r10, lsl #2; \
-	vld1.32 {t1##d1[0]}, [r6];	add r11, CTXs0, r11, lsl #2; \
-	vld1.32 {t1##d1[1]}, [r7]; \
-	vld1.32 {t2##d1[0]}, [r8]; \
-	vld1.32 {t2##d1[1]}, [r9];	veor y, t0, t1; \
-	vld1.32 {t3##d1[0]}, [r10];	veor y,  y, t2; \
-	vld1.32 {t3##d1[1]}, [r11];	veor y,  y, t3; \
+	vld1.32 {t0##d1[0]}, [r4,:32];	add r9, CTXs3, r9, lsl #2; \
+	vld1.32 {t0##d1[1]}, [r5,:32];	add r10, CTXs0, r10, lsl #2; \
+	vld1.32 {t1##d1[0]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
+	vld1.32 {t1##d1[1]}, [r7,:32]; \
+	vld1.32 {t2##d1[0]}, [r8,:32]; \
+	vld1.32 {t2##d1[1]}, [r9,:32];	veor y, t0, t1; \
+	vld1.32 {t3##d1[0]}, [r10,:32];	veor y,  y, t2; \
+	vld1.32 {t3##d1[1]}, [r11,:32];	veor y,  y, t3; \
 	\
 	/* Store next b */ \
 	add r4, rt, #16; \
@@ -209,14 +199,14 @@
 	ldrb r9, [rt, #6];		add r6, CTXs2, r6, lsl #2; \
 	ldrb r10, [rt, #3];		add r7, CTXs2, r7, lsl #2; \
 	ldrb r11, [rt, #7];		add r8, CTXs1, r8, lsl #2; \
-	vld1.32 {t0##d0[0]}, [r4];	add r9, CTXs1, r9, lsl #2; \
-	vld1.32 {t0##d0[1]}, [r5];	add r10, CTXs0, r10, lsl #2; \
-	vld1.32 {t1##d0[0]}, [r6];	add r11, CTXs0, r11, lsl #2; \
-	vld1.32 {t1##d0[1]}, [r7]; \
-	vld1.32 {t2##d0[0]}, [r8]; \
-	vld1.32 {t2##d0[1]}, [r9]; \
-	vld1.32 {t3##d0[0]}, [r10]; \
-	vld1.32 {t3##d0[1]}, [r11]; \
+	vld1.32 {t0##d0[0]}, [r4,:32];	add r9, CTXs1, r9, lsl #2; \
+	vld1.32 {t0##d0[1]}, [r5,:32];	add r10, CTXs0, r10, lsl #2; \
+	vld1.32 {t1##d0[0]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
+	vld1.32 {t1##d0[1]}, [r7,:32]; \
+	vld1.32 {t2##d0[0]}, [r8,:32]; \
+	vld1.32 {t2##d0[1]}, [r9,:32]; \
+	vld1.32 {t3##d0[0]}, [r10,:32]; \
+	vld1.32 {t3##d0[1]}, [r11,:32]; \
 	\
 	ldrb r4, [rt, #8]; \
 	ldrb r5, [rt, #12]; \
@@ -226,14 +216,14 @@
 	ldrb r9, [rt, #14];		add r6, CTXs2, r6, lsl #2; \
 	ldrb r10, [rt, #11];		add r7, CTXs2, r7, lsl #2; \
 	ldrb r11, [rt, #15];		add r8, CTXs1, r8, lsl #2; \
-	vld1.32 {t0##d1[0]}, [r4];	add r9, CTXs1, r9, lsl #2; \
-	vld1.32 {t0##d1[1]}, [r5];	add r10, CTXs0, r10, lsl #2; \
-	vld1.32 {t1##d1[0]}, [r6];	add r11, CTXs0, r11, lsl #2; \
-	vld1.32 {t1##d1[1]}, [r7]; \
-	vld1.32 {t2##d1[0]}, [r8]; \
-	vld1.32 {t2##d1[1]}, [r9];	veor x, t0, t1; \
-	vld1.32 {t3##d1[0]}, [r10];	veor x,  x, t2; \
-	vld1.32 {t3##d1[1]}, [r11];	veor x,  x, t3; \
+	vld1.32 {t0##d1[0]}, [r4,:32];	add r9, CTXs1, r9, lsl #2; \
+	vld1.32 {t0##d1[1]}, [r5,:32];	add r10, CTXs0, r10, lsl #2; \
+	vld1.32 {t1##d1[0]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
+	vld1.32 {t1##d1[1]}, [r7,:32]; \
+	vld1.32 {t2##d1[0]}, [r8,:32]; \
+	vld1.32 {t2##d1[1]}, [r9,:32];	veor x, t0, t1; \
+	vld1.32 {t3##d1[0]}, [r10,:32];	veor x,  x, t2; \
+	vld1.32 {t3##d1[1]}, [r11,:32];	veor x,  x, t3; \
 	\
 	/* Store next a */ \
 	vst1.32 {na}, [rt, :128]; \
@@ -247,14 +237,14 @@
 	ldrb r9, [rt, #22];		add r6, CTXs3, r6, lsl #2; \
 	ldrb r10, [rt, #19];		add r7, CTXs3, r7, lsl #2; \
 	ldrb r11, [rt, #23];		add r8, CTXs2, r8, lsl #2; \
-	vld1.32 {t0##d0[0]}, [r4];	add r9, CTXs2, r9, lsl #2; \
-	vld1.32 {t0##d0[1]}, [r5];	add r10, CTXs1, r10, lsl #2; \
-	vld1.32 {t1##d0[0]}, [r6];	add r11, CTXs1, r11, lsl #2; \
-	vld1.32 {t1##d0[1]}, [r7]; \
-	vld1.32 {t2##d0[0]}, [r8]; \
-	vld1.32 {t2##d0[1]}, [r9]; \
-	vld1.32 {t3##d0[0]}, [r10]; \
-	vld1.32 {t3##d0[1]}, [r11]; \
+	vld1.32 {t0##d0[0]}, [r4,:32];	add r9, CTXs2, r9, lsl #2; \
+	vld1.32 {t0##d0[1]}, [r5,:32];	add r10, CTXs1, r10, lsl #2; \
+	vld1.32 {t1##d0[0]}, [r6,:32];	add r11, CTXs1, r11, lsl #2; \
+	vld1.32 {t1##d0[1]}, [r7,:32]; \
+	vld1.32 {t2##d0[0]}, [r8,:32]; \
+	vld1.32 {t2##d0[1]}, [r9,:32]; \
+	vld1.32 {t3##d0[0]}, [r10,:32]; \
+	vld1.32 {t3##d0[1]}, [r11,:32]; \
 	\
 	ldrb r4, [rt, #24]; \
 	ldrb r5, [rt, #28]; \
@@ -264,14 +254,14 @@
 	ldrb r9, [rt, #30];		add r6, CTXs3, r6, lsl #2; \
 	ldrb r10, [rt, #27];		add r7, CTXs3, r7, lsl #2; \
 	ldrb r11, [rt, #31];		add r8, CTXs2, r8, lsl #2; \
-	vld1.32 {t0##d1[0]}, [r4];	add r9, CTXs2, r9, lsl #2; \
-	vld1.32 {t0##d1[1]}, [r5];	add r10, CTXs1, r10, lsl #2; \
-	vld1.32 {t1##d1[0]}, [r6];	add r11, CTXs1, r11, lsl #2; \
-	vld1.32 {t1##d1[1]}, [r7]; \
-	vld1.32 {t2##d1[0]}, [r8]; \
-	vld1.32 {t2##d1[1]}, [r9];	veor y, t0, t1; \
-	vld1.32 {t3##d1[0]}, [r10];	veor y,  y, t2; \
-	vld1.32 {t3##d1[1]}, [r11];	veor y,  y, t3; \
+	vld1.32 {t0##d1[0]}, [r4,:32];	add r9, CTXs2, r9, lsl #2; \
+	vld1.32 {t0##d1[1]}, [r5,:32];	add r10, CTXs1, r10, lsl #2; \
+	vld1.32 {t1##d1[0]}, [r6,:32];	add r11, CTXs1, r11, lsl #2; \
+	vld1.32 {t1##d1[1]}, [r7,:32]; \
+	vld1.32 {t2##d1[0]}, [r8,:32]; \
+	vld1.32 {t2##d1[1]}, [r9,:32];	veor y, t0, t1; \
+	vld1.32 {t3##d1[0]}, [r10,:32];	veor y,  y, t2; \
+	vld1.32 {t3##d1[1]}, [r11,:32];	veor y,  y, t3; \
 	\
 	/* Store next b */ \
 	add r4, rt, #16; \
@@ -363,38 +353,33 @@ __twofish_enc_blk8_neon:
 	vrev32.8 RA3, RA3;	vrev32.8 RB3, RB3;
 #endif
 
-	transpose_4x4(RA0, RA1, RA2, RA3);
-	transpose_4x4(RB0, RB1, RB2, RB3);
-
 	add	r9, sp, #0;
 	add	r10, CTXs3, #(w - s3);
 	add	r11, sp, #16;
 	add	RROUND, CTXs3, #(k - s3);
 
 	/* Load whitening key */
-	vld1.32 {RT0}, [r10];
+	vld1.32 {RT0}, [r10, :64];
+
+	/* Store zero value in RT5 */
+	veor RT5, RT4, RT4;
 
 	/* Input whitening */
-	vdup.32 RT3, RT0d0[0];
-	vdup.32 RT1, RT0d0[1];
-	veor RA0, RA0, RT3;	veor RB0, RB0, RT3;
-	veor RA1, RA1, RT1;	veor RB1, RB1, RT1;
+	veor RA0, RA0, RT0;	veor RB0, RB0, RT0;
+	veor RA1, RA1, RT0;	veor RB1, RB1, RT0;
+	veor RA2, RA2, RT0;	veor RB2, RB2, RT0;
+	veor RA3, RA3, RT0;	veor RB3, RB3, RT0;
+
+	transpose_4x4(RA0, RA1, RA2, RA3);
 
 	/* Store a and b */
 	vst1.32 {RA0}, [r9, :128];
 	vst1.32 {RA1}, [r11, :128];
 
-	vdup.32 RT2, RT0d1[0];
-	vdup.32 RT0, RT0d1[1];
-
-	veor RA2, RA2, RT2;	veor RB2, RB2, RT2;
-	veor RA3, RA3, RT0;	veor RB3, RB3, RT0;
-
-	/* Store zero value in RT5 */
-	veor RT5, RA0, RA0;
+	transpose_4x4(RB0, RB1, RB2, RB3);
 
 	/* Rounds */
-	vld1.32 {RT4}, [RROUND]!;
+	vld1.32 {RT4}, [RROUND, :64]!;
 
 	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(0, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
@@ -406,7 +391,7 @@ __twofish_enc_blk8_neon:
 	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(1, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
-	vld1.32 {RT4}, [RROUND]!;
+	vld1.32 {RT4}, [RROUND, :64]!;
 
 	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(2, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
@@ -418,7 +403,7 @@ __twofish_enc_blk8_neon:
 	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(3, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
-	vld1.32 {RT4}, [RROUND]!;
+	vld1.32 {RT4}, [RROUND, :64]!;
 
 	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(4, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
@@ -430,7 +415,7 @@ __twofish_enc_blk8_neon:
 	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(5, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
-	vld1.32 {RT4}, [RROUND]!;
+	vld1.32 {RT4}, [RROUND, :64]!;
 
 	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(6, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
@@ -442,7 +427,7 @@ __twofish_enc_blk8_neon:
 	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(7, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
-	vld1.32 {RT4}, [RROUND]!;
+	vld1.32 {RT4}, [RROUND, :64]!;
 
 	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(8, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
@@ -454,7 +439,7 @@ __twofish_enc_blk8_neon:
 	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(9, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
-	vld1.32 {RT4}, [RROUND]!;
+	vld1.32 {RT4}, [RROUND, :64]!;
 
 	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(10, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
@@ -466,7 +451,7 @@ __twofish_enc_blk8_neon:
 	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(11, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
-	vld1.32 {RT4}, [RROUND]!;
+	vld1.32 {RT4}, [RROUND, :64]!;
 
 	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(12, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
@@ -478,7 +463,7 @@ __twofish_enc_blk8_neon:
 	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(13, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
-	vld1.32 {RT4}, [RROUND];
+	vld1.32 {RT4}, [RROUND, :64];
 
 	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(14, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
@@ -495,13 +480,16 @@ __twofish_enc_blk8_neon:
 	ENCRYPT_ROUND(15, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	/* Load whitening key */
-	vld1.32 {RT0}, [RROUND];
-
-	/* Output whitening */
-	BLOCK_XOR_KEY(RA2, RA3, RA0, RA1, RB2, RB3, RB0, RB1, RT0, RT1, RT2, RT3);
+	vld1.32 {RT0}, [RROUND, :64];
 
 	transpose_4x4(RA2, RA3, RA0, RA1);
 	transpose_4x4(RB2, RB3, RB0, RB1);
+
+	/* Output whitening */
+	veor RA2, RA2, RT0;	veor RB2, RB2, RT0;
+	veor RA3, RA3, RT0;	veor RB3, RB3, RT0;
+	veor RA0, RA0, RT0;	veor RB0, RB0, RT0;
+	veor RA1, RA1, RT0;	veor RB1, RB1, RT0;
 
 #ifndef __ARMEL__
 	vrev32.8 RA2, RA2;	vrev32.8 RB2, RB2;
@@ -548,36 +536,32 @@ __twofish_dec_blk8_neon:
 	vrev32.8 RA1, RA1;	vrev32.8 RB1, RB1;
 #endif
 
-	transpose_4x4(RA2, RA3, RA0, RA1);
-	transpose_4x4(RB2, RB3, RB0, RB1);
-
 	add	r9, sp, #0;
 	add	r10, CTXs3, #(w + 4*4 - s3);
 	add	r11, sp, #16;
 	add	RROUND, CTXs3, #(k - s3 + 8 * 14);
 
 	/* Load whitening key */
-	vld1.32 {RT0}, [r10];
+	vld1.32 {RT0}, [r10, :64];
 
-	vdup.32 RT3, RT0d0[0];
-	vdup.32 RT1, RT0d0[1];
-	veor RA2, RA2, RT3;	veor RB2, RB2, RT3;
-	veor RA3, RA3, RT1;	veor RB3, RB3, RT1;
+	/* Store zero value in RT5 */
+	veor RT5, RT4, RT4;
+
+	veor RA2, RA2, RT0;	veor RB2, RB2, RT0;
+	veor RA3, RA3, RT0;	veor RB3, RB3, RT0;
+	veor RA0, RA0, RT0;	veor RB0, RB0, RT0;
+	veor RA1, RA1, RT0;	veor RB1, RB1, RT0;
+
+	transpose_4x4(RA2, RA3, RA0, RA1);
 
 	/* Store a and b */
 	vst1.32 {RA2}, [r9, :128];
 	vst1.32 {RA3}, [r11, :128];
 
-	vdup.32 RT2, RT0d1[0];
-	vdup.32 RT0, RT0d1[1];
-	veor RA0, RA0, RT2;	veor RB0, RB0, RT2;
-	veor RA1, RA1, RT0;	veor RB1, RB1, RT0;
-
-	/* Store zero value in RT5 */
-	veor RT5, RA0, RA0;
+	transpose_4x4(RB2, RB3, RB0, RB1);
 
 	/* Rounds */
-	vld1.32 {RT4}, [RROUND];
+	vld1.32 {RT4}, [RROUND, :64];
 
 	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(15, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
@@ -591,7 +575,7 @@ __twofish_dec_blk8_neon:
 	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(14, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
-	vld1.32 {RT4}, [RROUND];
+	vld1.32 {RT4}, [RROUND, :64];
 
 	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(13, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
@@ -605,7 +589,7 @@ __twofish_dec_blk8_neon:
 	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(12, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
-	vld1.32 {RT4}, [RROUND];
+	vld1.32 {RT4}, [RROUND, :64];
 
 	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(11, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
@@ -619,7 +603,7 @@ __twofish_dec_blk8_neon:
 	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(10, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
-	vld1.32 {RT4}, [RROUND];
+	vld1.32 {RT4}, [RROUND, :64];
 
 	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(9, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
@@ -633,7 +617,7 @@ __twofish_dec_blk8_neon:
 	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(8, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
-	vld1.32 {RT4}, [RROUND];
+	vld1.32 {RT4}, [RROUND, :64];
 
 	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(7, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
@@ -647,7 +631,7 @@ __twofish_dec_blk8_neon:
 	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(6, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
-	vld1.32 {RT4}, [RROUND];
+	vld1.32 {RT4}, [RROUND, :64];
 
 	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(5, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
@@ -661,7 +645,7 @@ __twofish_dec_blk8_neon:
 	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(4, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
-	vld1.32 {RT4}, [RROUND];
+	vld1.32 {RT4}, [RROUND, :64];
 
 	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(3, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
@@ -675,7 +659,7 @@ __twofish_dec_blk8_neon:
 	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(2, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
-	vld1.32 {RT4}, [RROUND];
+	vld1.32 {RT4}, [RROUND, :64];
 
 	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(1, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
@@ -692,13 +676,16 @@ __twofish_dec_blk8_neon:
 	DECRYPT_ROUND(0, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
 	/* Load whitening key */
-	vld1.32 {RT0}, [RROUND];
-
-	/* Output whitening */
-	BLOCK_XOR_KEY(RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3, RT0, RT1, RT2, RT3);
+	vld1.32 {RT0}, [RROUND, :64];
 
 	transpose_4x4(RA0, RA1, RA2, RA3);
 	transpose_4x4(RB0, RB1, RB2, RB3);
+
+	/* Output whitening */
+	veor RA0, RA0, RT0;	veor RB0, RB0, RT0;
+	veor RA1, RA1, RT0;	veor RB1, RB1, RT0;
+	veor RA2, RA2, RT0;	veor RB2, RB2, RT0;
+	veor RA3, RA3, RT0;	veor RB3, RB3, RT0;
 
 #ifndef __ARMEL__
 	vrev32.8 RA0, RA0;	vrev32.8 RB0, RB0;

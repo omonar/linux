@@ -132,6 +132,28 @@ extern int glue_ctr_crypt_128bit(const struct common_glue_ctx *gctx,
 				 struct scatterlist *dst,
 				 struct scatterlist *src, unsigned int nbytes);
 
+extern int glue_ecb_crypt_128bit_aligned(const struct common_glue_ctx *gctx,
+					 struct blkcipher_desc *desc,
+					 struct scatterlist *dst,
+					 struct scatterlist *src, unsigned int nbytes);
+
+extern int glue_cbc_encrypt_128bit_aligned(const common_glue_func_t fn,
+					   struct blkcipher_desc *desc,
+					   struct scatterlist *dst,
+					   struct scatterlist *src,
+					   unsigned int nbytes);
+
+extern int glue_cbc_decrypt_128bit_aligned(const struct common_glue_ctx *gctx,
+					   struct blkcipher_desc *desc,
+					   struct scatterlist *dst,
+					   struct scatterlist *src,
+					   unsigned int nbytes);
+
+extern int glue_ctr_crypt_128bit_aligned(const struct common_glue_ctx *gctx,
+					 struct blkcipher_desc *desc,
+					 struct scatterlist *dst,
+					 struct scatterlist *src, unsigned int nbytes);
+
 extern int glue_xts_crypt_128bit(const struct common_glue_ctx *gctx,
 				 struct blkcipher_desc *desc,
 				 struct scatterlist *dst,

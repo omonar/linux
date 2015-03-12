@@ -4,18 +4,6 @@
 #include <linux/crypto.h>
 #include <crypto/twofish.h>
 
-#define TWOFISH_PARALLEL_BLOCKS 8
-
-struct twofish_lrw_ctx {
-	struct lrw_table_ctx lrw_table;
-	struct twofish_ctx twofish_ctx;
-};
-
-struct twofish_xts_ctx {
-	struct twofish_ctx tweak_ctx;
-	struct twofish_ctx crypt_ctx;
-};
-
 asmlinkage void twofish_ecb_enc_8way_neon(struct twofish_ctx *ctx, u8 *dst,
 					 const u8 *src);
 asmlinkage void twofish_ecb_dec_8way_neon(struct twofish_ctx *ctx, u8 *dst,
