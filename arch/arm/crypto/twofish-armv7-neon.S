@@ -111,8 +111,8 @@
  **********************************************************************/
 
 #ifdef __ARMEL__
-#define T_TABLE_LOOKUP(rt, a, b, x, y, na, nb, t0, t1, t2, t3) \
-	/* Load a */ \
+#define T_TABLE_LOOKUP(rt, a, b, rv1, rv2, x, y, na, nb, t0, t1, t2, t3) \
+	/* Load a and right rotate rv1 */ \
 	ldrb r4, [rt, #0]; \
 	ldrb r5, [rt, #4]; \
 	ldrb r6, [rt, #1]; \
@@ -126,9 +126,9 @@
 	vld1.32 {t1##d0[0]}, [r6,:32];	add r11, CTXs3, r11, lsl #2; \
 	vld1.32 {t1##d0[1]}, [r7,:32]; \
 	vld1.32 {t2##d0[0]}, [r8,:32]; \
-	vld1.32 {t2##d0[1]}, [r9,:32]; \
-	vld1.32 {t3##d0[0]}, [r10,:32]; \
-	vld1.32 {t3##d0[1]}, [r11,:32]; \
+	vld1.32 {t2##d0[1]}, [r9,:32];	vshl.u32 x, rv1, #(32 - 1); \
+	vld1.32 {t3##d0[0]}, [r10,:32];	vshr.u32 rv1, rv1, #1; \
+	vld1.32 {t3##d0[1]}, [r11,:32];	veor rv1, rv1, x; \
 	\
 	ldrb r4, [rt, #8]; \
 	ldrb r5, [rt, #12]; \
@@ -150,7 +150,7 @@
 	/* Store next a */ \
 	vst1.32 {na}, [rt, :128]; \
 	\
-	/* Load b */ \
+	/* Load b and left rotate rv */ \
 	ldrb r4, [rt, #16]; \
 	ldrb r5, [rt, #20]; \
 	ldrb r6, [rt, #17]; \
@@ -164,9 +164,9 @@
 	vld1.32 {t1##d0[0]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
 	vld1.32 {t1##d0[1]}, [r7,:32]; \
 	vld1.32 {t2##d0[0]}, [r8,:32]; \
-	vld1.32 {t2##d0[1]}, [r9,:32]; \
-	vld1.32 {t3##d0[0]}, [r10,:32]; \
-	vld1.32 {t3##d0[1]}, [r11,:32]; \
+	vld1.32 {t2##d0[1]}, [r9,:32];	vshr.u32 y, rv2, #(32 - 1);\
+	vld1.32 {t3##d0[0]}, [r10,:32];	vshl.u32 rv2, rv2, #1; \
+	vld1.32 {t3##d0[1]}, [r11,:32];	veor rv2, rv2, y; \
 	\
 	ldrb r4, [rt, #24]; \
 	ldrb r5, [rt, #28]; \
@@ -189,8 +189,8 @@
 	add r4, rt, #16; \
 	vst1.32 {nb}, [r4, :128];
 #else
-#define T_TABLE_LOOKUP(rt, a, b, x, y, na, nb, t0, t1, t2, t3) \
-	/* Load a */ \
+#define T_TABLE_LOOKUP(rt, a, b, rv1, rv2, x, y, na, nb, t0, t1, t2, t3) \
+	/* Load a and right rotate rv1 */ \
 	ldrb r4, [rt, #0]; \
 	ldrb r5, [rt, #4]; \
 	ldrb r6, [rt, #1]; \
@@ -204,9 +204,9 @@
 	vld1.32 {t1##d0[0]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
 	vld1.32 {t1##d0[1]}, [r7,:32]; \
 	vld1.32 {t2##d0[0]}, [r8,:32]; \
-	vld1.32 {t2##d0[1]}, [r9,:32]; \
-	vld1.32 {t3##d0[0]}, [r10,:32]; \
-	vld1.32 {t3##d0[1]}, [r11,:32]; \
+	vld1.32 {t2##d0[1]}, [r9,:32];	vshl.u32 x, rv1, #(32 - 1); \
+	vld1.32 {t3##d0[0]}, [r10,:32];	vshr.u32 rv1, rv1, #1; \
+	vld1.32 {t3##d0[1]}, [r11,:32];	veor rv1, rv1, x; \
 	\
 	ldrb r4, [rt, #8]; \
 	ldrb r5, [rt, #12]; \
@@ -228,7 +228,7 @@
 	/* Store next a */ \
 	vst1.32 {na}, [rt, :128]; \
 	\
-	/* Load b */ \
+	/* Load b and left rotate rv2 */ \
 	ldrb r4, [rt, #16]; \
 	ldrb r5, [rt, #20]; \
 	ldrb r6, [rt, #17]; \
@@ -242,9 +242,9 @@
 	vld1.32 {t1##d0[0]}, [r6,:32];	add r11, CTXs1, r11, lsl #2; \
 	vld1.32 {t1##d0[1]}, [r7,:32]; \
 	vld1.32 {t2##d0[0]}, [r8,:32]; \
-	vld1.32 {t2##d0[1]}, [r9,:32]; \
-	vld1.32 {t3##d0[0]}, [r10,:32]; \
-	vld1.32 {t3##d0[1]}, [r11,:32]; \
+	vld1.32 {t2##d0[1]}, [r9,:32];	vshr.u32 y, rv2, #(32 - 1); \
+	vld1.32 {t3##d0[0]}, [r10,:32];	vshl.u32 rv2, rv2, #1; \
+	vld1.32 {t3##d0[1]}, [r11,:32];	veor rv2, rv2, y; \
 	\
 	ldrb r4, [rt, #24]; \
 	ldrb r5, [rt, #28]; \
@@ -270,57 +270,41 @@
 
 /* Apply a Twofish round to eight parallel blocks */
 #define ENCRYPT_ROUND(n, x, y, c, d, rk, t0, t1, t2, t3) \
-	/* Left rotate d */ \
-	vshr.u32 t1, d, #(32 - 1); \
-	vshl.u32 d, d, #1; \
+	/* k[2*n + 1] */ \
+	vdup.32 t3, rk[1]; \
 	/* x += y */ \
 	vadd.u32 x, x, y; \
 	/* k[2*n] */ \
 	vdup.32 t2, rk[0]; \
-	/* k[2*n + 1] */ \
-	vdup.32 t3, rk[1]; \
-	/* x + k[2*n] */ \
-	vadd.u32 t2, t2, x; \
 	/* x + k[2*n + 1] */ \
 	vadd.u32 t3, t3, x; \
-	/* c ^= x + k[2*n] */ \
-	veor c, c, t2; \
-	veor d, d, t1; \
+	/* x + k[2*n] */ \
+	vadd.u32 t2, t2, x; \
 	/* y += x + k[2*n + 1] */ \
 	vadd.u32 y, y, t3; \
-	/* Right rotate c */ \
-	vshl.u32 t0, c, #(32 - 1); \
-	vshr.u32 c, c, #1; \
+	/* c ^= x + k[2*n] */ \
+	veor c, c, t2; \
 	/* d ^= y */ \
-	veor d, d, y; \
-	veor c, c, t0;
+	veor d, d, y;
 
 /* Apply an inverse Twofish round to eight parallel blocks */
 #define DECRYPT_ROUND(n, x, y, c, d, rk, t0, t1, t2, t3) \
-	/* Left rotate c */ \
-	vshr.u32 t1, c, #(32 - 1); \
-	vshl.u32 c, c, #1; \
+	/* k[2*n + 1] */ \
+	vdup.32 t3, rk[1]; \
 	/* x += y */ \
 	vadd.u32 x, x, y; \
 	/* k[2*n] */ \
 	vdup.32 t2, rk[0]; \
-	/* k[2*n + 1] */ \
-	vdup.32 t3, rk[1]; \
-	/* y += x */ \
-	vadd.u32 y, y, x; \
+	/* x + k[2*n + 1] */ \
+	vadd.u32 t3, t3, x; \
 	/* x + k[2*n] */ \
 	vadd.u32 t2, t2, x; \
-	/* y + k[2*n + 1] */ \
-	vadd.u32 t3, t3, y; \
-	/* d ^= y + k[2*n + 1] */ \
-	veor d, d, t3; \
-	veor c, c, t1; \
-	/* Right rotate d */ \
-	vshl.u32 t0, d, #(32 - 1); \
-	vshr.u32 d, d, #1; \
+	/* y += x + k[2*n + 1] */ \
+	vadd.u32 y, y, t3; \
 	/* c ^= x + k[2*n] */ \
 	veor c, c, t2; \
-	veor d, d, t0;
+	/* d ^= y */ \
+	veor d, d, y;
 
 .type __twofish_enc_blk8_neon,%function
 .align 4
@@ -381,106 +365,111 @@ __twofish_enc_blk8_neon:
 	/* Rounds */
 	vld1.32 {RT4}, [RROUND, :64]!;
 
-	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA0, RA1, RT5, RA3, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(0, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB0, RB1, RA2, RB3, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(0, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
-	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA2, RA3, RB2, RA1, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(1, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB2, RB3, RA0, RB1, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(1, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	vld1.32 {RT4}, [RROUND, :64]!;
 
-	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA0, RA1, RB0, RA3, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(2, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB0, RB1, RA2, RB3, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(2, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
-	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA2, RA3, RB2, RA1, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(3, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB2, RB3, RA0, RB1, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(3, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	vld1.32 {RT4}, [RROUND, :64]!;
 
-	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA0, RA1, RB0, RA3, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(4, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB0, RB1, RA2, RB3, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(4, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
-	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA2, RA3, RB2, RA1, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(5, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB2, RB3, RA0, RB1, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(5, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	vld1.32 {RT4}, [RROUND, :64]!;
 
-	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA0, RA1, RB0, RA3, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(6, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB0, RB1, RA2, RB3, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(6, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
-	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA2, RA3, RB2, RA1, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(7, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB2, RB3, RA0, RB1, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(7, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	vld1.32 {RT4}, [RROUND, :64]!;
 
-	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA0, RA1, RB0, RA3, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(8, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB0, RB1, RA2, RB3, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(8, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
-	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA2, RA3, RB2, RA1, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(9, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB2, RB3, RA0, RB1, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(9, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	vld1.32 {RT4}, [RROUND, :64]!;
 
-	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA0, RA1, RB0, RA3, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(10, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB0, RB1, RA2, RB3, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(10, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
-	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA2, RA3, RB2, RA1, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(11, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB2, RB3, RA0, RB1, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(11, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	vld1.32 {RT4}, [RROUND, :64]!;
 
-	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA0, RA1, RB0, RA3, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(12, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB0, RB1, RA2, RB3, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(12, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
-	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA2, RA3, RB2, RA1, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(13, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB2, RB3, RA0, RB1, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(13, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	vld1.32 {RT4}, [RROUND, :64];
 
-	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA0, RA1, RB0, RA3, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(14, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB0, RB1, RA2, RB3, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(14, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
 	/* Load pointer to whitening key */
 	add	RROUND, CTXs3, #(w + 4*4 - s3);
 
 	/* During last round we wipe data on stack using RT5 */
-	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA2, RA3, RB2, RA1, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(15, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RT5, RT5, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB2, RB3, RA0, RB1, RX, RY, RT5, RT5, RT0, RT1, RT2, RT3);
 	ENCRYPT_ROUND(15, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	/* Load whitening key */
 	vld1.32 {RT0}, [RROUND, :64];
+
+	/* Right rotate final c */
+	vshl.u32 RX, RB0, #(32 - 1);
+	vshr.u32 RB0, RB0, #1;
+	veor RB0, RB0, RX;
 
 	transpose_4x4(RA2, RA3, RA0, RA1);
 	transpose_4x4(RB2, RB3, RB0, RB1);
@@ -563,120 +552,125 @@ __twofish_dec_blk8_neon:
 	/* Rounds */
 	vld1.32 {RT4}, [RROUND, :64];
 
-	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA2, RA3, RT5, RA0, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(15, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB2, RB3, RA1, RB0, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(15, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	sub RROUND, RROUND, #16;
 
-	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA0, RA1, RB1, RA2, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(14, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB0, RB1, RA3, RB2, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(14, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
 	vld1.32 {RT4}, [RROUND, :64];
 
-	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA2, RA3, RB3, RA0, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(13, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB2, RB3, RA1, RB0, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(13, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	sub RROUND, RROUND, #16;
 
-	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA0, RA1, RB1, RA2, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(12, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB0, RB1, RA3, RB2, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(12, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
 	vld1.32 {RT4}, [RROUND, :64];
 
-	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA2, RA3, RB3, RA0, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(11, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB2, RB3, RA1, RB0, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(11, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	sub RROUND, RROUND, #16;
 
-	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA0, RA1, RB1, RA2, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(10, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB0, RB1, RA3, RB2, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(10, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
 	vld1.32 {RT4}, [RROUND, :64];
 
-	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA2, RA3, RB3, RA0, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(9, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB2, RB3, RA1, RB0, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(9, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	sub RROUND, RROUND, #16;
 
-	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA0, RA1, RB1, RA2, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(8, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB0, RB1, RA3, RB2, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(8, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
 	vld1.32 {RT4}, [RROUND, :64];
 
-	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA2, RA3, RB3, RA0, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(7, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB2, RB3, RA1, RB0, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(7, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	sub RROUND, RROUND, #16;
 
-	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA0, RA1, RB1, RA2, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(6, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB0, RB1, RA3, RB2, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(6, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
 	vld1.32 {RT4}, [RROUND, :64];
 
-	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA2, RA3, RB3, RA0, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(5, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB2, RB3, RA1, RB0, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(5, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	sub RROUND, RROUND, #16;
 
-	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA0, RA1, RB1, RA2, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(4, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB0, RB1, RA3, RB2, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(4, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
 	vld1.32 {RT4}, [RROUND, :64];
 
-	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA2, RA3, RB3, RA0, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(3, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB2, RB3, RA1, RB0, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(3, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	sub RROUND, RROUND, #16;
 
-	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA0, RA1, RB1, RA2, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(2, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB0, RB1, RA3, RB2, RX, RY, RA2, RA3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(2, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
 	vld1.32 {RT4}, [RROUND, :64];
 
-	T_TABLE_LOOKUP(sp, RA2, RA3, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA2, RA3, RB3, RA0, RX, RY, RB2, RB3, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(1, RX, RY, RA0, RA1, RT4d1, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB2, RB3, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB2, RB3, RA1, RB0, RX, RY, RA0, RA1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(1, RX, RY, RB0, RB1, RT4d1, RT0, RT1, RT2, RT3);
 
 	/* Load pointer to whitening key */
 	add	RROUND, CTXs3, #(w - s3);
 
 	/* During last round we wipe data on stack using RT5 */
-	T_TABLE_LOOKUP(sp, RA0, RA1, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RA0, RA1, RB1, RA2, RX, RY, RB0, RB1, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(0, RX, RY, RA2, RA3, RT4d0, RT0, RT1, RT2, RT3);
-	T_TABLE_LOOKUP(sp, RB0, RB1, RX, RY, RT5, RT5, RT0, RT1, RT2, RT3);
+	T_TABLE_LOOKUP(sp, RB0, RB1, RA3, RB2, RX, RY, RT5, RT5, RT0, RT1, RT2, RT3);
 	DECRYPT_ROUND(0, RX, RY, RB2, RB3, RT4d0, RT0, RT1, RT2, RT3);
 
 	/* Load whitening key */
 	vld1.32 {RT0}, [RROUND, :64];
+
+	/* Right rotate final d */
+	vshl.u32 RX, RB3, #(32 - 1);
+	vshr.u32 RB3, RB3, #1;
+	veor RB3, RB3, RX;
 
 	transpose_4x4(RA0, RA1, RA2, RA3);
 	transpose_4x4(RB0, RB1, RB2, RB3);
