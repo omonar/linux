@@ -45,6 +45,8 @@
 #define RT1 q11
 #define RT2 q12
 #define RT3 q13
+#define RT4 q14
+#define RT5 q15
 
 #define RA0d0 d0
 #define RA0d1 d1
@@ -88,214 +90,184 @@
  **********************************************************************/
 
 /*
- * These are the S-Boxes of Serpent from following research paper.
- *
- *  D. A. Osvik, .Speeding up Serpent,. in Third AES Candidate Conference,
- *   (New York, New York, USA), p. 317.329, National Institute of Standards and
- *   Technology, 2000.
- *
- * Paper is also available at: http://www.ii.uib.no/~osvik/pub/aes3.pdf
+ * These are the S-Boxes of Serpent from crypto/serpent_generic.c.
  *
  */
-#define SBOX0(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	veor	a3, a3, a0;	veor	b3, b3, b0;	vmov	a4, a1;		vmov	b4, b1;		\
-	vand	a1, a1, a3;	vand	b1, b1, b3;	veor	a4, a4, a2;	veor	b4, b4, b2;	\
-	veor	a1, a1, a0;	veor	b1, b1, b0;	vorr	a0, a0, a3;	vorr	b0, b0, b3;	\
-	veor	a0, a0, a4;	veor	b0, b0, b4;	veor	a4, a4, a3;	veor	b4, b4, b3;	\
-	veor	a3, a3, a2;	veor	b3, b3, b2;	vorr	a2, a2, a1;	vorr	b2, b2, b1;	\
-	veor	a2, a2, a4;	veor	b2, b2, b4;	vmvn	a4, a4;		vmvn	b4, b4;		\
-	vorr	a4, a4, a1;	vorr	b4, b4, b1;	veor	a1, a1, a3;	veor	b1, b1, b3;	\
-	veor	a1, a1, a4;	veor	b1, b1, b4;	vorr	a3, a3, a0;	vorr	b3, b3, b0;	\
-	veor	a1, a1, a3;	veor	b1, b1, b3;	veor	a4, a3;		veor	b4, b3;
+#define SBOX0(a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	vorr	a5, a3, a0;	vorr	b5, b3, b0;	veor	a0, a0, a3;	veor	b0, b0, b3; \
+	veor	a4, a3, a2;	veor	b4, b3, b2;	veor	a3, a5, a1;	veor	b3, b5, b1; \
+	vmvn	a4, a4;		vmvn	b4, b4;		vand	a1, a1, a0;	vand	b1, b1, b0; \
+	veor	a2, a2, a0;	veor	b2, b2, b0;	veor	a1, a1, a4;	veor	b1, b1, b4; \
+	veor	a0, a0, a3;	veor	b0, b0, b3;	vorr	a4, a4, a0;	vorr	b4, b4, b0; \
+	veor	a0, a0, a2;	veor	b0, b0, b2;	vand	a2, a2, a1;	vand	b2, b2, b1; \
+	veor	a3, a3, a2;	veor	b3, b3, b2;	vmvn	a1, a1;		vmvn	b1, b1; \
+	veor	a2, a2, a4;	veor	b2, b2, b4;	veor	a1, a1, a2;	veor	b1, b1, b2;
 
-#define SBOX0_INVERSE(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	vmvn	a2, a2;		vmvn	b2, b2;		vmov	a4, a1;		vmov	b4, b1;		\
-	vorr	a1, a1, a0;	vorr	b1, b1, b0;	vmvn	a4, a4;		vmvn	b4, b4;		\
-	veor	a1, a1, a2;	veor	b1, b1, b2;	vorr	a2, a2, a4;	vorr	b2, b2, b4;	\
-	veor	a1, a1, a3;	veor	b1, b1, b3;	veor	a0, a0, a4;	veor	b0, b0, b4;	\
-	veor	a2, a2, a0;	veor	b2, b2, b0;	vand	a0, a0, a3;	vand	b0, b0, b3;	\
-	veor	a4, a4, a0;	veor	b4, b4, b0;	vorr	a0, a0, a1;	vorr	b0, b0, b1;	\
-	veor	a0, a0, a2;	veor	b0, b0, b2;	veor	a3, a3, a4;	veor	b3, b3, b4;	\
-	veor	a2, a2, a1;	veor	b2, b2, b1;	veor	a3, a3, a0;	veor	b3, b3, b0;	\
-	veor	a3, a3, a1;	veor	b3, b3, b1;\
-	vand	a2, a2, a3;	vand	b2, b2, b3;\
-	veor	a4, a2;	veor	b4, b2;
+#define SBOX0_INVERSE(a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	veor	a1, a1, a0;	veor	b1, b1, b0;	vorr	a5, a3, a1;	vorr	b5, b3, b1; \
+	veor	a4, a3, a1;	veor	b4, b3, b1;	vmvn	a0, a0;		vmvn	b0, b0; \
+	veor	a2, a5, a2;	veor	b2, b5, b2;	veor	a3, a5, a0;	veor	b3, b5, b0; \
+	vand	a0, a1, a0;	vand	b0, b1, b0;	veor	a0, a0, a2;	veor	b0, b0, b2; \
+	vand	a2, a2, a3;	vand	b2, b2, b3;	veor	a3, a3, a4;	veor	b3, b3, b4; \
+	veor	a2, a2, a3;	veor	b2, b2, b3;	veor	a1, a1, a3;	veor	b1, b1, b3; \
+	vand	a3, a3, a0;	vand	b3, b3, b0;	veor	a1, a1, a0;	veor	b1, b1, b0; \
+	veor	a0, a0, a2;	veor	b0, b0, b2;	veor	a4, a4, a3;	veor	b4, b4, b3;
 
-#define SBOX1(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	vmvn	a0, a0;		vmvn	b0, b0;		vmvn	a2, a2;		vmvn	b2, b2;		\
-	vmov	a4, a0;		vmov	b4, b0;		vand	a0, a0, a1;	vand	b0, b0, b1;	\
-	veor	a2, a2, a0;	veor	b2, b2, b0;	vorr	a0, a0, a3;	vorr	b0, b0, b3;	\
-	veor	a3, a3, a2;	veor	b3, b3, b2;	veor	a1, a1, a0;	veor	b1, b1, b0;	\
-	veor	a0, a0, a4;	veor	b0, b0, b4;	vorr	a4, a4, a1;	vorr	b4, b4, b1;	\
-	veor	a1, a1, a3;	veor	b1, b1, b3;	vorr	a2, a2, a0;	vorr	b2, b2, b0;	\
-	vand	a2, a2, a4;	vand	b2, b2, b4;	veor	a0, a0, a1;	veor	b0, b0, b1;	\
-	vand	a1, a1, a2;	vand	b1, b1, b2;\
-	veor	a1, a1, a0;	veor	b1, b1, b0;	vand	a0, a0, a2;	vand	b0, b0, b2;	\
-	veor	a0, a4;		veor	b0, b4;
+#define SBOX1(a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	veor	a5, a1, a0;	veor	b5, b1, b0;	veor	a0, a0, a3;	veor	b0, b0, b3; \
+	vmvn	a3, a3;		vmvn	b3, b3;		vand	a4, a1, a5;	vand	b4, b1, b5; \
+	vorr	a0, a0, a5;	vorr	b0, b0, b5;	veor	a3, a3, a2;	veor	b3, b3, b2; \
+	veor	a0, a0, a3;	veor	b0, b0, b3;	veor	a1, a5, a3;	veor	b1, b5, b3; \
+	veor	a3, a3, a4;	veor	b3, b3, b4;	vorr	a1, a1, a4;	vorr	b1, b1, b4; \
+	veor	a4, a4, a2;	veor	b4, b4, b2;	vand	a2, a2, a0;	vand	b2, b2, b0; \
+	veor	a2, a2, a1;	veor	b2, b2, b1;	vorr	a1, a1, a0;	vorr	b1, b1, b0; \
+	vmvn	a0, a0;		vmvn	b0, b0;		veor	a0, a0, a2;	veor	b0, b0, b2; \
+	veor	a4, a4, a1;	veor	b4, b4, b1;
 
-#define SBOX1_INVERSE(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	vmov	a4, a1;		vmov	b4, b1;		veor	a1, a1, a3;	veor	b1, b1, b3;	\
-	vand	a3, a3, a1;	vand	b3, b3, b1;	veor	a4, a4, a2;	veor	b4, b4, b2;	\
-	veor	a3, a3, a0;	veor	b3, b3, b0;	vorr	a0, a0, a1;	vorr	b0, b0, b1;	\
-	veor	a2, a2, a3;	veor	b2, b2, b3;	veor	a0, a0, a4;	veor	b0, b0, b4;	\
-	vorr	a0, a0, a2;	vorr	b0, b0, b2;	veor	a1, a1, a3;	veor	b1, b1, b3;	\
-	veor	a0, a0, a1;	veor	b0, b0, b1;	vorr	a1, a1, a3;	vorr	b1, b1, b3;	\
-	veor	a1, a1, a0;	veor	b1, b1, b0;	vmvn	a4, a4;		vmvn	b4, b4;		\
-	veor	a4, a4, a1;	veor	b4, b4, b1;	vorr	a1, a1, a0;	vorr	b1, b1, b0;	\
-	veor	a1, a1, a0;	veor	b1, b1, b0;\
-	vorr	a1, a1, a4;	vorr	b1, b1, b4;\
-	veor	a3, a1;		veor	b3, b1;
+#define SBOX1_INVERSE(a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	veor	a1, a1, a3;	veor	b1, b1, b3;	veor	a5, a2, a0;	veor	b5, b2, b0; \
+	vmvn	a2, a2;		vmvn	b2, b2;		vorr	a4, a1, a0;	vorr	b4, b1, b0; \
+	veor	a4, a4, a3;	veor	b4, b4, b3;	vand	a3, a3, a1;	vand	b3, b3, b1; \
+	veor	a1, a1, a2;	veor	b1, b1, b2;	vand	a2, a4, a2;	vand	b2, b4, b2; \
+	veor	a4, a4, a1;	veor	b4, b4, b1;	vorr	a1, a1, a3;	vorr	b1, b1, b3; \
+	veor	a3, a3, a5;	veor	b3, b3, b5;	veor	a2, a2, a5;	veor	b2, b2, b5; \
+	vorr	a0, a4, a5;	vorr	b0, b4, b5;	veor	a2, a2, a4;	veor	b2, b2, b4; \
+	veor	a1, a1, a0;	veor	b1, b1, b0;	veor	a4, a4, a1;	veor	b4, b4, b1;
 
-#define SBOX2(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	vmov	a4, a0;		vmov	b4, b0;		vand	a0, a0, a2;	vand	b0, b0, b2;	\
-	veor	a0, a0, a3;	veor	b0, b0, b3;	veor	a2, a2, a1;	veor	b2, b2, b1;	\
-	veor	a2, a2, a0;	veor	b2, b2, b0;	vorr	a3, a3, a4;	vorr	b3, b3, b4;	\
-	veor	a3, a3, a1;	veor	b3, b3, b1;	veor	a4, a4, a2;	veor	b4, b4, b2;	\
-	vmov	a1, a3;		vmov	b1, b3;		vorr	a3, a3, a4;	vorr	b3, b3, b4;	\
-	veor	a3, a3, a0;	veor	b3, b3, b0;	vand	a0, a0, a1;	vand	b0, b0, b1;	\
-	veor	a4, a4, a0;	veor	b4, b4, b0;	veor	a1, a1, a3;	veor	b1, b1, b3;	\
-	veor	a1, a1, a4;	veor	b1, b1, b4;	vmvn	a4, a4;		vmvn	b4, b4;
+#define SBOX2(a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	vmvn	a3, a3;		vmvn	b3, b3;		veor	a1, a1, a0;	veor	b1, b1, b0; \
+	vand	a5, a0, a2;	vand	b5, b0, b2;	veor	a5, a5, a3;	veor	b5, b5, b3; \
+	vorr	a3, a3, a0;	vorr	b3, b3, b0;	veor	a2, a2, a1;	veor	b2, b2, b1; \
+	veor	a3, a3, a1;	veor	b3, b3, b1;	vand	a1, a1, a5;	vand	b1, b1, b5; \
+	veor	a5, a5, a2;	veor	b5, b5, b2;	vand	a2, a2, a3;	vand	b2, b2, b3; \
+	vorr	a3, a3, a1;	vorr	b3, b3, b1;	vmvn	a5, a5;		vmvn	b5, b5; \
+	veor	a3, a3, a5;	veor	b3, b3, b5;	veor	a4, a0, a5;	veor	b4, b0, b5; \
+	veor	a0, a5, a2;	veor	b0, b5, b2;	vorr	a1, a1, a2;	vorr	b1, b1, b2;
 
-#define SBOX2_INVERSE(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	veor	a2, a2, a3;	veor	b2, b2, b3;	veor	a3, a3, a0;	veor	b3, b3, b0;	\
-	vmov	a4, a3;		vmov	b4, b3;		vand	a3, a3, a2;	vand	b3, b3, b2;	\
-	veor	a3, a3, a1;	veor	b3, b3, b1;	vorr	a1, a1, a2;	vorr	b1, b1, b2;	\
-	veor	a1, a1, a4;	veor	b1, b1, b4;	vand	a4, a4, a3;	vand	b4, b4, b3;	\
-	veor	a2, a2, a3;	veor	b2, b2, b3;	vand	a4, a4, a0;	vand	b4, b4, b0;	\
-	veor	a4, a4, a2;	veor	b4, b4, b2;	vand	a2, a2, a1;	vand	b2, b2, b1;	\
-	vorr	a2, a2, a0;	vorr	b2, b2, b0;	vmvn	a3, a3;		vmvn	b3, b3;		\
-	veor	a2, a2, a3;	veor	b2, b2, b3;	veor	a0, a0, a3;	veor	b0, b0, b3;	\
-	vand	a0, a0, a1;	vand	b0, b0, b1;	veor	a3, a3, a4;	veor	b3, b3, b4;	\
-	veor	a3, a0;		veor	b3, b0;
+#define SBOX2_INVERSE(a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	veor	a2, a1, a2;	veor	b2, b1, b2;	vmvn	a5, a3;		vmvn	b5, b3; \
+	vorr	a5, a5, a2;	vorr	b5, b5, b2;	veor	a2, a2, a3;	veor	b2, b2, b3; \
+	veor	a4, a3, a0;	veor	b4, b3, b0;	veor	a3, a5, a1;	veor	b3, b5, b1; \
+	vorr	a1, a1, a2;	vorr	b1, b1, b2;	veor	a2, a2, a0;	veor	b2, b2, b0; \
+	veor	a1, a1, a4;	veor	b1, b1, b4;	vorr	a4, a4, a3;	vorr	b4, b4, b3; \
+	veor	a2, a2, a3;	veor	b2, b2, b3;	veor	a4, a4, a2;	veor	b4, b4, b2; \
+	vand	a2, a2, a1;	vand	b2, b2, b1;	veor	a2, a2, a3;	veor	b2, b2, b3; \
+	veor	a3, a3, a4;	veor	b3, b3, b4;	veor	a4, a4, a0;	veor	b4, b4, b0;
 
-#define SBOX3(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	vmov	a4, a0;		vmov	b4, b0;		vorr	a0, a0, a3;	vorr	b0, b0, b3;	\
-	veor	a3, a3, a1;	veor	b3, b3, b1;	vand	a1, a1, a4;	vand	b1, b1, b4;	\
-	veor	a4, a4, a2;	veor	b4, b4, b2;	veor	a2, a2, a3;	veor	b2, b2, b3;	\
-	vand	a3, a3, a0;	vand	b3, b3, b0;	vorr	a4, a4, a1;	vorr	b4, b4, b1;	\
-	veor	a3, a3, a4;	veor	b3, b3, b4;	veor	a0, a0, a1;	veor	b0, b0, b1;	\
-	vand	a4, a4, a0;	vand	b4, b4, b0;	veor	a1, a1, a3;	veor	b1, b1, b3;	\
-	veor	a4, a4, a2;	veor	b4, b4, b2;	vorr	a1, a1, a0;	vorr	b1, b1, b0;	\
-	veor	a1, a1, a2;	veor	b1, b1, b2;	veor	a0, a0, a3;	veor	b0, b0, b3;	\
-	vmov	a2, a1;		vmov	b2, b1;		vorr	a1, a1, a3;	vorr	b1, b1, b3;	\
-	veor	a1, a0;		veor	b1, b0;
+#define SBOX3(a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	veor	a5, a1, a3;	veor	b5, b1, b3;	vorr	a3, a3, a0;	vorr	b3, b3, b0; \
+	vand	a4, a1, a0;	vand	b4, b1, b0;	veor	a0, a0, a2;	veor	b0, b0, b2; \
+	veor	a2, a2, a5;	veor	b2, b2, b5;	vand	a1, a5, a3;	vand	b1, b5, b3; \
+	veor	a2, a2, a3;	veor	b2, b2, b3;	vorr	a0, a0, a4;	vorr	b0, b0, b4; \
+	veor	a4, a4, a3;	veor	b4, b4, b3;	veor	a1, a1, a0;	veor	b1, b1, b0; \
+	vand	a0, a0, a3;	vand	b0, b0, b3;	vand	a3, a3, a4;	vand	b3, b3, b4; \
+	veor	a3, a3, a2;	veor	b3, b3, b2;	vorr	a4, a4, a1;	vorr	b4, b4, b1; \
+	vand	a2, a2, a1;	vand	b2, b2, b1;	veor	a4, a4, a3;	veor	b4, b4, b3; \
+	veor	a0, a0, a3;	veor	b0, b0, b3;	veor	a3, a3, a2;	veor	b3, b3, b2;
 
-#define SBOX3_INVERSE(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	vmov	a4, a2;		vmov	b4, b2;		veor	a2, a2, a1;	veor	b2, b2, b1;	\
-	veor	a0, a0, a2;	veor	b0, b0, b2;	vand	a4, a4, a2;	vand	b4, b4, b2;	\
-	veor	a4, a4, a0;	veor	b4, b4, b0;	vand	a0, a0, a1;	vand	b0, b0, b1;	\
-	veor	a1, a1, a3;	veor	b1, b1, b3;	vorr	a3, a3, a4;	vorr	b3, b3, b4;	\
-	veor	a2, a2, a3;	veor	b2, b2, b3;	veor	a0, a0, a3;	veor	b0, b0, b3;	\
-	veor	a1, a1, a4;	veor	b1, b1, b4;	vand	a3, a3, a2;	vand	b3, b3, b2;	\
-	veor	a3, a3, a1;	veor	b3, b3, b1;	veor	a1, a1, a0;	veor	b1, b1, b0;	\
-	vorr	a1, a1, a2;	vorr	b1, b1, b2;	veor	a0, a0, a3;	veor	b0, b0, b3;	\
-	veor	a1, a1, a4;	veor	b1, b1, b4;\
-	veor	a0, a1;		veor	b0, b1;
+#define SBOX3_INVERSE(a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	veor	a2, a1, a2;	veor	b2, b1, b2;	vand	a5, a1, a2;	vand	b5, b1, b2; \
+	veor	a5, a5, a0;	veor	b5, b5, b0;	vorr	a0, a1, a0;	vorr	b0, b1, b0; \
+	veor	a4, a1, a3;	veor	b4, b1, b3;	veor	a0, a0, a3;	veor	b0, b0, b3; \
+	vorr	a3, a3, a5;	vorr	b3, b3, b5;	veor	a1, a5, a2;	veor	b1, b5, b2; \
+	veor	a1, a1, a3;	veor	b1, b1, b3;	veor	a0, a0, a2;	veor	b0, b0, b2; \
+	veor	a2, a2, a3;	veor	b2, b2, b3;	vand	a3, a3, a1;	vand	b3, b3, b1; \
+	veor	a1, a1, a0;	veor	b1, b1, b0;	vand	a0, a0, a2;	vand	b0, b0, b2; \
+	veor	a4, a4, a3;	veor	b4, b4, b3;	veor	a3, a3, a0;	veor	b3, b3, b0; \
+	veor	a0, a0, a1;	veor	b0, b0, b1;
 
-#define SBOX4(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	veor	a1, a1, a3;	veor	b1, b1, b3;	vmvn	a3, a3;		vmvn	b3, b3;		\
-	veor	a2, a2, a3;	veor	b2, b2, b3;	veor	a3, a3, a0;	veor	b3, b3, b0;	\
-	vmov	a4, a1;		vmov	b4, b1;		vand	a1, a1, a3;	vand	b1, b1, b3;	\
-	veor	a1, a1, a2;	veor	b1, b1, b2;	veor	a4, a4, a3;	veor	b4, b4, b3;	\
-	veor	a0, a0, a4;	veor	b0, b0, b4;	vand	a2, a2, a4;	vand	b2, b2, b4;	\
-	veor	a2, a2, a0;	veor	b2, b2, b0;	vand	a0, a0, a1;	vand	b0, b0, b1;	\
-	veor	a3, a3, a0;	veor	b3, b3, b0;	vorr	a4, a4, a1;	vorr	b4, b4, b1;	\
-	veor	a4, a4, a0;	veor	b4, b4, b0;	vorr	a0, a0, a3;	vorr	b0, b0, b3;	\
-	veor	a0, a0, a2;	veor	b0, b0, b2;	vand	a2, a2, a3;	vand	b2, b2, b3;	\
-	vmvn	a0, a0;		vmvn	b0, b0;		veor	a4, a2;		veor	b4, b2;
+#define SBOX4(a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	vand	a5, a3, a0;	vand	b5, b3, b0;	veor	a0, a0, a3;	veor	b0, b0, b3; \
+	veor	a5, a5, a2;	veor	b5, b5, b2;	vorr	a2, a2, a3;	vorr	b2, b2, b3; \
+	veor	a0, a0, a1;	veor	b0, b0, b1;	veor	a4, a3, a5;	veor	b4, b3, b5; \
+	vorr	a2, a2, a0;	vorr	b2, b2, b0;	veor	a2, a2, a1;	veor	b2, b2, b1; \
+	vand	a1, a1, a0;	vand	b1, b1, b0;	veor	a1, a1, a4;	veor	b1, b1, b4; \
+	vand	a4, a4, a2;	vand	b4, b4, b2;	veor	a2, a2, a5;	veor	b2, b2, b5; \
+	veor	a4, a4, a0;	veor	b4, b4, b0;	vorr	a3, a5, a1;	vorr	b3, b5, b1; \
+	vmvn	a1, a1;		vmvn	b1, b1;		veor	a3, a3, a0;	veor	b3, b3, b0;
 
-#define SBOX4_INVERSE(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	vmov	a4, a2;		vmov	b4, b2;		vand	a2, a2, a3;	vand	b2, b2, b3;	\
-	veor	a2, a2, a1;	veor	b2, b2, b1;	vorr	a1, a1, a3;	vorr	b1, b1, b3;	\
-	vand	a1, a1, a0;	vand	b1, b1, b0;	veor	a4, a4, a2;	veor	b4, b4, b2;	\
-	veor	a4, a4, a1;	veor	b4, b4, b1;	vand	a1, a1, a2;	vand	b1, b1, b2;	\
-	vmvn	a0, a0;		vmvn	b0, b0;		veor	a3, a3, a4;	veor	b3, b3, b4;	\
-	veor	a1, a1, a3;	veor	b1, b1, b3;	vand	a3, a3, a0;	vand	b3, b3, b0;	\
-	veor	a3, a3, a2;	veor	b3, b3, b2;	veor	a0, a0, a1;	veor	b0, b0, b1;	\
-	vand	a2, a2, a0;	vand	b2, b2, b0;	veor	a3, a3, a0;	veor	b3, b3, b0;	\
-	veor	a2, a2, a4;	veor	b2, b2, b4;\
-	vorr	a2, a2, a3;	vorr	b2, b2, b3;	veor	a3, a3, a0;	veor	b3, b3, b0;	\
-	veor	a2, a1;		veor	b2, b1;
+#define SBOX4_INVERSE(a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	veor	a2, a3, a2;	veor	b2, b3, b2;	vand	a5, a1, a0;	vand	b5, b1, b0; \
+	veor	a5, a5, a2;	veor	b5, b5, b2;	vorr	a2, a2, a3;	vorr	b2, b2, b3; \
+	vmvn	a4, a0;		vmvn	b4, b0;		veor	a1, a1, a5;	veor	b1, b1, b5; \
+	veor	a0, a5, a2;	veor	b0, b5, b2;	vand	a2, a2, a4;	vand	b2, b2, b4; \
+	veor	a2, a2, a0;	veor	b2, b2, b0;	vorr	a0, a0, a4;	vorr	b0, b0, b4; \
+	veor	a0, a0, a3;	veor	b0, b0, b3;	vand	a3, a3, a2;	vand	b3, b3, b2; \
+	veor	a4, a3, a4;	veor	b4, b3, b4;	veor	a3, a3, a1;	veor	b3, b3, b1; \
+	vand	a1, a1, a0;	vand	b1, b1, b0;	veor	a4, a4, a1;	veor	b4, b4, b1; \
+	veor	a0, a0, a3;	veor	b0, b0, b3;
 
-#define SBOX5(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	veor	a0, a0, a1;	veor	b0, b0, b1;	veor	a1, a1, a3;	veor	b1, b1, b3;	\
-	vmvn	a3, a3;		vmvn	b3, b3;		vmov	a4, a1;		vmov	b4, b1;		\
-	vand	a1, a1, a0;	vand	b1, b1, b0;	veor	a2, a2, a3;	veor	b2, b2, b3;	\
-	veor	a1, a1, a2;	veor	b1, b1, b2;	vorr	a2, a2, a4;	vorr	b2, b2, b4;	\
-	veor	a4, a4, a3;	veor	b4, b4, b3;	vand	a3, a3, a1;	vand	b3, b3, b1;	\
-	veor	a3, a3, a0;	veor	b3, b3, b0;	veor	a4, a4, a1;	veor	b4, b4, b1;	\
-	veor	a4, a4, a2;	veor	b4, b4, b2;	veor	a2, a2, a0;	veor	b2, b2, b0;	\
-	vand	a0, a0, a3;	vand	b0, b0, b3;	vmvn	a2, a2;		vmvn	b2, b2;		\
-	veor	a0, a0, a4;	veor	b0, b0, b4;	vorr	a4, a4, a3;	vorr	b4, b4, b3;	\
-	veor	a2, a4;		veor	b2, b4;
+#define SBOX5(a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	vorr	a5, a1, a0;	vorr	b5, b1, b0;	vmvn	a3, a3;		vmvn	b3, b3; \
+	veor	a2, a2, a5;	veor	b2, b2, b5;	veor	a4, a1, a0;	veor	b4, b1, b0; \
+	veor	a0, a0, a2;	veor	b0, b0, b2;	vand	a1, a5, a4;	vand	b1, b5, b4; \
+	vorr	a4, a4, a3;	vorr	b4, b4, b3;	veor	a1, a1, a3;	veor	b1, b1, b3; \
+	veor	a4, a4, a0;	veor	b4, b4, b0;	vand	a0, a0, a3;	vand	b0, b0, b3; \
+	veor	a3, a3, a2;	veor	b3, b3, b2;	vand	a2, a2, a4;	vand	b2, b2, b4; \
+	veor	a0, a0, a1;	veor	b0, b0, b1;	veor	a1, a1, a2;	veor	b1, b1, b2; \
+	vand	a2, a2, a0;	vand	b2, b2, b0;	veor	a3, a3, a2;	veor	b3, b3, b2;
 
-#define SBOX5_INVERSE(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	vmvn	a1, a1;		vmvn	b1, b1;		vmov	a4, a3;		vmov	b4, b3;		\
-	veor	a2, a2, a1;	veor	b2, b2, b1;	vorr	a3, a3, a0;	vorr	b3, b3, b0;	\
-	veor	a3, a3, a2;	veor	b3, b3, b2;	vorr	a2, a2, a1;	vorr	b2, b2, b1;	\
-	vand	a2, a2, a0;	vand	b2, b2, b0;	veor	a4, a4, a3;	veor	b4, b4, b3;	\
-	veor	a2, a2, a4;	veor	b2, b2, b4;	vorr	a4, a4, a0;	vorr	b4, b4, b0;	\
-	veor	a4, a4, a1;	veor	b4, b4, b1;	vand	a1, a1, a2;	vand	b1, b1, b2;	\
-	veor	a1, a1, a3;	veor	b1, b1, b3;	veor	a4, a4, a2;	veor	b4, b4, b2;	\
-	vand	a3, a3, a4;	vand	b3, b3, b4;	veor	a4, a4, a1;	veor	b4, b4, b1;	\
-	veor	a3, a3, a4;	veor	b3, b3, b4;	vmvn	a4, a4;		vmvn	b4, b4;		\
-	veor	a3, a0;		veor	b3, b0;
+#define SBOX5_INVERSE(a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	vorr	a5, a1, a2;	vorr	b5, b1, b2;	veor	a2, a1, a2;	veor	b2, b1, b2; \
+	veor	a5, a5, a3;	veor	b5, b5, b3;	vand	a3, a3, a1;	vand	b3, b3, b1; \
+	veor	a2, a2, a3;	veor	b2, b2, b3;	vorr	a3, a3, a0;	vorr	b3, b3, b0; \
+	vmvn	a0, a0;		vmvn	b0, b0;		veor	a3, a3, a2;	veor	b3, b3, b2; \
+	vorr	a2, a2, a0;	vorr	b2, b2, b0;	veor	a4, a1, a5;	veor	b4, b1, b5; \
+	veor	a2, a2, a4;	veor	b2, b2, b4;	vand	a4, a4, a0;	vand	b4, b4, b0; \
+	veor	a0, a5, a0;	veor	b0, b5, b0;	veor	a1, a5, a3;	veor	b1, b5, b3; \
+	vand	a0, a0, a2;	vand	b0, b0, b2;	veor	a2, a2, a3;	veor	b2, b2, b3; \
+	veor	a0, a0, a2;	veor	b0, b0, b2;	veor	a2, a2, a4;	veor	b2, b2, b4; \
+	veor	a4, a4, a3;	veor	b4, b4, b3;
 
-#define SBOX6(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	vmvn	a2, a2;		vmvn	b2, b2;		vmov	a4, a3;		vmov	b4, b3;		\
-	vand	a3, a3, a0;	vand	b3, b3, b0;	veor	a0, a0, a4;	veor	b0, b0, b4;	\
-	veor	a3, a3, a2;	veor	b3, b3, b2;	vorr	a2, a2, a4;	vorr	b2, b2, b4;	\
-	veor	a1, a1, a3;	veor	b1, b1, b3;	veor	a2, a2, a0;	veor	b2, b2, b0;	\
-	vorr	a0, a0, a1;	vorr	b0, b0, b1;	veor	a2, a2, a1;	veor	b2, b2, b1;	\
-	veor	a4, a4, a0;	veor	b4, b4, b0;	vorr	a0, a0, a3;	vorr	b0, b0, b3;	\
-	veor	a0, a0, a2;	veor	b0, b0, b2;	veor	a4, a4, a3;	veor	b4, b4, b3;	\
-	veor	a4, a4, a0;	veor	b4, b4, b0;	vmvn	a3, a3;		vmvn	b3, b3;		\
-	vand	a2, a2, a4;	vand	b2, b2, b4;\
-	veor	a2, a3;		veor	b2, b3;
+#define SBOX6(a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	veor	a3, a3, a0;	veor	b3, b3, b0;	veor	a5, a1, a2;	veor	b5, b1, b2; \
+	veor	a2, a2, a0;	veor	b2, b2, b0;	vand	a0, a0, a3;	vand	b0, b0, b3; \
+	vorr	a5, a5, a3;	vorr	b5, b5, b3;	vmvn	a4, a1;		vmvn	b4, b1; \
+	veor	a0, a0, a5;	veor	b0, b0, b5;	veor	a1, a5, a2;	veor	b1, b5, b2; \
+	veor	a3, a3, a4;	veor	b3, b3, b4;	veor	a4, a4, a0;	veor	b4, b4, b0; \
+	vand	a2, a2, a0;	vand	b2, b2, b0;	veor	a4, a4, a1;	veor	b4, b4, b1; \
+	veor	a2, a2, a3;	veor	b2, b2, b3;	vand	a3, a3, a1;	vand	b3, b3, b1; \
+	veor	a3, a3, a0;	veor	b3, b3, b0;	veor	a1, a1, a2;	veor	b1, b1, b2;
 
-#define SBOX6_INVERSE(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	veor	a0, a0, a2;	veor	b0, b0, b2;	vmov	a4, a2;		vmov	b4, b2;		\
-	vand	a2, a2, a0;	vand	b2, b2, b0;	veor	a4, a4, a3;	veor	b4, b4, b3;	\
-	vmvn	a2, a2;		vmvn	b2, b2;		veor	a3, a3, a1;	veor	b3, b3, b1;	\
-	veor	a2, a2, a3;	veor	b2, b2, b3;	vorr	a4, a4, a0;	vorr	b4, b4, b0;	\
-	veor	a0, a0, a2;	veor	b0, b0, b2;	veor	a3, a3, a4;	veor	b3, b3, b4;	\
-	veor	a4, a4, a1;	veor	b4, b4, b1;	vand	a1, a1, a3;	vand	b1, b1, b3;	\
-	veor	a1, a1, a0;	veor	b1, b1, b0;	veor	a0, a0, a3;	veor	b0, b0, b3;	\
-	vorr	a0, a0, a2;	vorr	b0, b0, b2;	veor	a3, a3, a1;	veor	b3, b3, b1;	\
-	veor	a4, a0;		veor	b4, b0;
+#define SBOX6_INVERSE(a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	veor	a0, a2, a0;	veor	b0, b2, b0;	vand	a5, a3, a0;	vand	b5, b3, b0; \
+	veor	a2, a3, a2;	veor	b2, b3, b2;	veor	a5, a5, a2;	veor	b5, b5, b2; \
+	veor	a3, a3, a1;	veor	b3, b3, b1;	vorr	a2, a2, a0;	vorr	b2, b2, b0; \
+	veor	a2, a2, a3;	veor	b2, b2, b3;	vand	a3, a3, a5;	vand	b3, b3, b5; \
+	vmvn	a5, a5;		vmvn	b5, b5;		veor	a3, a3, a1;	veor	b3, b3, b1; \
+	vand	a1, a1, a2;	vand	b1, b1, b2;	veor	a4, a5, a0;	veor	b4, b5, b0; \
+	veor	a3, a3, a4;	veor	b3, b3, b4;	veor	a4, a4, a2;	veor	b4, b4, b2; \
+	veor	a0, a5, a1;	veor	b0, b5, b1;	veor	a2, a2, a0;	veor	b2, b2, b0;
 
-#define SBOX7(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	vmov	a4, a1;		vmov	b4, b1;		vorr	a1, a1, a2;	vorr	b1, b1, b2;	\
-	veor	a1, a1, a3;	veor	b1, b1, b3;	veor	a4, a4, a2;	veor	b4, b4, b2;	\
-	veor	a2, a2, a1;	veor	b2, b2, b1;	vorr	a3, a3, a4;	vorr	b3, b3, b4;	\
-	vand	a3, a3, a0;	vand	b3, b3, b0;	veor	a4, a4, a2;	veor	b4, b4, b2;	\
-	veor	a3, a3, a1;	veor	b3, b3, b1;	vorr	a1, a1, a4;	vorr	b1, b1, b4;	\
-	veor	a1, a1, a0;	veor	b1, b1, b0;	vorr	a0, a0, a4;	vorr	b0, b0, b4;	\
-	veor	a0, a0, a2;	veor	b0, b0, b2;	veor	a1, a1, a4;	veor	b1, b1, b4;	\
-	veor	a2, a2, a1;	veor	b2, b2, b1;	vand	a1, a1, a0;	vand	b1, b1, b0;	\
-	veor	a1, a1, a4;	veor	b1, b1, b4;	vmvn	a2, a2;		vmvn	b2, b2;		\
-	vorr	a2, a2, a0;	vorr	b2, b2, b0;\
-	veor	a4, a2;		veor	b4, b2;
+#define SBOX7(a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	vmvn	a4, a1;		vmvn	b4, b1;		vmvn	a0, a0;		vmvn	b0, b0; \
+	vand	a1, a4, a2;	vand	b1, b4, b2;	veor	a1, a1, a3;	veor	b1, b1, b3; \
+	vorr	a3, a3, a4;	vorr	b3, b3, b4;	veor	a4, a4, a2;	veor	b4, b4, b2; \
+	veor	a2, a2, a3;	veor	b2, b2, b3;	veor	a3, a3, a0;	veor	b3, b3, b0; \
+	vorr	a0, a0, a1;	vorr	b0, b0, b1;	vand	a2, a2, a0;	vand	b2, b2, b0; \
+	veor	a0, a0, a4;	veor	b0, b0, b4;	veor	a4, a4, a3;	veor	b4, b4, b3; \
+	vand	a3, a3, a0;	vand	b3, b3, b0;	veor	a4, a4, a1;	veor	b4, b4, b1; \
+	veor	a2, a2, a4;	veor	b2, b2, b4;	veor	a3, a3, a1;	veor	b3, b3, b1; \
+	vorr	a4, a4, a0;	vorr	b4, b4, b0;	veor	a4, a4, a1;	veor	b4, b4, b1;
 
-#define SBOX7_INVERSE(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	vmov	a4, a2;		vmov	b4, b2;		veor	a2, a2, a0;	veor	b2, b2, b0;	\
-	vand	a0, a0, a3;	vand	b0, b0, b3;	vorr	a4, a4, a3;	vorr	b4, b4, b3;	\
-	vmvn	a2, a2;		vmvn	b2, b2;		veor	a3, a3, a1;	veor	b3, b3, b1;	\
-	vorr	a1, a1, a0;	vorr	b1, b1, b0;	veor	a0, a0, a2;	veor	b0, b0, b2;	\
-	vand	a2, a2, a4;	vand	b2, b2, b4;	vand	a3, a3, a4;	vand	b3, b3, b4;	\
-	veor	a1, a1, a2;	veor	b1, b1, b2;	veor	a2, a2, a0;	veor	b2, b2, b0;	\
-	vorr	a0, a0, a2;	vorr	b0, b0, b2;	veor	a4, a4, a1;	veor	b4, b4, b1;	\
-	veor	a0, a0, a3;	veor	b0, b0, b3;	veor	a3, a3, a4;	veor	b3, b3, b4;	\
-	vorr	a4, a4, a0;	vorr	b4, b4, b0;	veor	a3, a3, a2;	veor	b3, b3, b2;	\
-	veor	a4, a2;		veor	b4, b2;
+#define SBOX7_INVERSE(a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	vand	a5, a3, a0;	vand	b5, b3, b0;	veor	a0, a2, a0;	veor	b0, b2, b0; \
+	vorr	a2, a3, a2;	vorr	b2, b3, b2;	veor	a4, a3, a1;	veor	b4, b3, b1; \
+	vmvn	a0, a0;		vmvn	b0, b0;		vorr	a1, a1, a5;	vorr	b1, b1, b5; \
+	veor	a4, a4, a0;	veor	b4, b4, b0;	vand	a0, a2, a0;	vand	b0, b2, b0; \
+	veor	a0, a0, a1;	veor	b0, b0, b1;	vand	a1, a1, a2;	vand	b1, b1, b2; \
+	veor	a3, a5, a2;	veor	b3, b5, b2;	veor	a4, a4, a3;	veor	b4, b4, b3; \
+	vand	a2, a2, a3;	vand	b2, b2, b3;	vorr	a3, a3, a0;	vorr	b3, b3, b0; \
+	veor	a1, a1, a4;	veor	b1, b1, b4;	veor	a3, a3, a4;	veor	b3, b3, b4; \
+	vand	a4, a4, a0;	vand	b4, b4, b0;	veor	a4, a4, a2;	veor	b4, b4, b2;
 
 /* Apply SBOX number WHICH to to the block.  */
-#define SBOX(which, a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	SBOX##which (a0, a1, a2, a3, a4, b0, b1, b2, b3, b4)
+#define SBOX(which, a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	SBOX##which (a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5)
 
 /* Apply inverse SBOX number WHICH to to the block.  */
-#define SBOX_INVERSE(which, a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
-	SBOX##which##_INVERSE (a0, a1, a2, a3, a4, b0, b1, b2, b3, b4)
+#define SBOX_INVERSE(which, a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5) \
+	SBOX##which##_INVERSE (a0, a1, a2, a3, a4, a5, b0, b1, b2, b3, b4, b5)
 
 /* XOR round key into block state in a0,a1,a2,a3. a4 used as temporary.  */
 #define BLOCK_XOR_KEY(a0, a1, a2, a3, a4, b0, b1, b2, b3, b4) \
@@ -383,7 +355,7 @@
 			    b0, b1, b2, b3, b4, nb0, nb1, nb2, nb3, nb4) \
 	BLOCK_XOR_KEY (a0, a1, a2, a3, a4, b0, b1, b2, b3, b4);		\
 	BLOCK_LOAD_KEY_ENC ();						\
-	SBOX (which, a0, a1, a2, a3, a4, b0, b1, b2, b3, b4);		\
+	SBOX (which, a0, a1, a2, a3, a4, RT4, b0, b1, b2, b3, b4, RT5);		\
 	LINEAR_TRANSFORMATION (na0, na1, na2, na3, na4, nb0, nb1, nb2, nb3, nb4);
 
 /* Apply the last Serpent round to eight parallel blocks.  This macro increments
@@ -392,7 +364,7 @@
 				 b0, b1, b2, b3, b4, nb0, nb1, nb2, nb3, nb4) \
 	BLOCK_XOR_KEY (a0, a1, a2, a3, a4, b0, b1, b2, b3, b4);		\
 	BLOCK_LOAD_KEY_ENC ();						\
-	SBOX (which, a0, a1, a2, a3, a4, b0, b1, b2, b3, b4);		\
+	SBOX (which, a0, a1, a2, a3, a4, RT4, b0, b1, b2, b3, b4, RT5);		\
 	BLOCK_XOR_KEY (na0, na1, na2, na3, na4, nb0, nb1, nb2, nb3, nb4);
 
 /* Apply an inverse Serpent round to eight parallel blocks.  This macro
@@ -402,7 +374,7 @@
 				    b0, b1, b2, b3, b4, \
 				    nb0, nb1, nb2, nb3, nb4) \
 	LINEAR_TRANSFORMATION_INVERSE (a0, a1, a2, a3, a4, b0, b1, b2, b3, b4);	\
-	SBOX_INVERSE (which, a0, a1, a2, a3, a4, b0, b1, b2, b3, b4);		\
+	SBOX_INVERSE (which, a0, a1, a2, a3, a4, RT4, b0, b1, b2, b3, b4, RT5);	\
 	BLOCK_XOR_KEY (na0, na1, na2, na3, na4, nb0, nb1, nb2, nb3, nb4);	\
 	BLOCK_LOAD_KEY_DEC ();
 
@@ -414,7 +386,7 @@
 					  nb0, nb1, nb2, nb3, nb4) \
 	BLOCK_XOR_KEY (a0, a1, a2, a3, a4, b0, b1, b2, b3, b4);			\
 	BLOCK_LOAD_KEY_DEC ();							\
-	SBOX_INVERSE (which, a0, a1, a2, a3, a4, b0, b1, b2, b3, b4); 		\
+	SBOX_INVERSE (which, a0, a1, a2, a3, a4, RT4, b0, b1, b2, b3, b4, RT5);	\
 	BLOCK_XOR_KEY (na0, na1, na2, na3, na4, nb0, nb1, nb2, nb3, nb4);	\
 	BLOCK_LOAD_KEY_DEC ();
 
@@ -426,7 +398,7 @@ __serpent_enc_blk8_neon:
 	 *	RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3: eight parallel plaintext
 	 *						blocks
 	 * output:
-	 *	RA4, RA1, RA2, RA0, RB4, RB1, RB2, RB0: eight parallel
+	 *	RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3: eight parallel
 	 * 						ciphertext blocks
 	 */
 
@@ -434,73 +406,73 @@ __serpent_enc_blk8_neon:
 	BLOCK_LOAD_KEY_ENC ();
 	transpose_4x4(RB0, RB1, RB2, RB3);
 
-	ROUND (0, 0, RA0, RA1, RA2, RA3, RA4, RA1, RA4, RA2, RA0, RA3,
-		     RB0, RB1, RB2, RB3, RB4, RB1, RB4, RB2, RB0, RB3);
-	ROUND (1, 1, RA1, RA4, RA2, RA0, RA3, RA2, RA1, RA0, RA4, RA3,
-		     RB1, RB4, RB2, RB0, RB3, RB2, RB1, RB0, RB4, RB3);
-	ROUND (2, 2, RA2, RA1, RA0, RA4, RA3, RA0, RA4, RA1, RA3, RA2,
-		     RB2, RB1, RB0, RB4, RB3, RB0, RB4, RB1, RB3, RB2);
-	ROUND (3, 3, RA0, RA4, RA1, RA3, RA2, RA4, RA1, RA3, RA2, RA0,
-		     RB0, RB4, RB1, RB3, RB2, RB4, RB1, RB3, RB2, RB0);
-	ROUND (4, 4, RA4, RA1, RA3, RA2, RA0, RA1, RA0, RA4, RA2, RA3,
-		     RB4, RB1, RB3, RB2, RB0, RB1, RB0, RB4, RB2, RB3);
-	ROUND (5, 5, RA1, RA0, RA4, RA2, RA3, RA0, RA2, RA1, RA4, RA3,
-		     RB1, RB0, RB4, RB2, RB3, RB0, RB2, RB1, RB4, RB3);
-	ROUND (6, 6, RA0, RA2, RA1, RA4, RA3, RA0, RA2, RA3, RA1, RA4,
-		     RB0, RB2, RB1, RB4, RB3, RB0, RB2, RB3, RB1, RB4);
-	ROUND (7, 7, RA0, RA2, RA3, RA1, RA4, RA4, RA1, RA2, RA0, RA3,
-		     RB0, RB2, RB3, RB1, RB4, RB4, RB1, RB2, RB0, RB3);
-	ROUND (8, 0, RA4, RA1, RA2, RA0, RA3, RA1, RA3, RA2, RA4, RA0,
-		     RB4, RB1, RB2, RB0, RB3, RB1, RB3, RB2, RB4, RB0);
-	ROUND (9, 1, RA1, RA3, RA2, RA4, RA0, RA2, RA1, RA4, RA3, RA0,
-		     RB1, RB3, RB2, RB4, RB0, RB2, RB1, RB4, RB3, RB0);
-	ROUND (10, 2, RA2, RA1, RA4, RA3, RA0, RA4, RA3, RA1, RA0, RA2,
-		      RB2, RB1, RB4, RB3, RB0, RB4, RB3, RB1, RB0, RB2);
-	ROUND (11, 3, RA4, RA3, RA1, RA0, RA2, RA3, RA1, RA0, RA2, RA4,
-		      RB4, RB3, RB1, RB0, RB2, RB3, RB1, RB0, RB2, RB4);
-	ROUND (12, 4, RA3, RA1, RA0, RA2, RA4, RA1, RA4, RA3, RA2, RA0,
-		      RB3, RB1, RB0, RB2, RB4, RB1, RB4, RB3, RB2, RB0);
-	ROUND (13, 5, RA1, RA4, RA3, RA2, RA0, RA4, RA2, RA1, RA3, RA0,
-		      RB1, RB4, RB3, RB2, RB0, RB4, RB2, RB1, RB3, RB0);
-	ROUND (14, 6, RA4, RA2, RA1, RA3, RA0, RA4, RA2, RA0, RA1, RA3,
-		      RB4, RB2, RB1, RB3, RB0, RB4, RB2, RB0, RB1, RB3);
-	ROUND (15, 7, RA4, RA2, RA0, RA1, RA3, RA3, RA1, RA2, RA4, RA0,
-		      RB4, RB2, RB0, RB1, RB3, RB3, RB1, RB2, RB4, RB0);
-	ROUND (16, 0, RA3, RA1, RA2, RA4, RA0, RA1, RA0, RA2, RA3, RA4,
-		      RB3, RB1, RB2, RB4, RB0, RB1, RB0, RB2, RB3, RB4);
-	ROUND (17, 1, RA1, RA0, RA2, RA3, RA4, RA2, RA1, RA3, RA0, RA4,
-		      RB1, RB0, RB2, RB3, RB4, RB2, RB1, RB3, RB0, RB4);
-	ROUND (18, 2, RA2, RA1, RA3, RA0, RA4, RA3, RA0, RA1, RA4, RA2,
-		      RB2, RB1, RB3, RB0, RB4, RB3, RB0, RB1, RB4, RB2);
-	ROUND (19, 3, RA3, RA0, RA1, RA4, RA2, RA0, RA1, RA4, RA2, RA3,
-		      RB3, RB0, RB1, RB4, RB2, RB0, RB1, RB4, RB2, RB3);
-	ROUND (20, 4, RA0, RA1, RA4, RA2, RA3, RA1, RA3, RA0, RA2, RA4,
-		      RB0, RB1, RB4, RB2, RB3, RB1, RB3, RB0, RB2, RB4);
-	ROUND (21, 5, RA1, RA3, RA0, RA2, RA4, RA3, RA2, RA1, RA0, RA4,
-		      RB1, RB3, RB0, RB2, RB4, RB3, RB2, RB1, RB0, RB4);
-	ROUND (22, 6, RA3, RA2, RA1, RA0, RA4, RA3, RA2, RA4, RA1, RA0,
-		      RB3, RB2, RB1, RB0, RB4, RB3, RB2, RB4, RB1, RB0);
-	ROUND (23, 7, RA3, RA2, RA4, RA1, RA0, RA0, RA1, RA2, RA3, RA4,
-		      RB3, RB2, RB4, RB1, RB0, RB0, RB1, RB2, RB3, RB4);
-	ROUND (24, 0, RA0, RA1, RA2, RA3, RA4, RA1, RA4, RA2, RA0, RA3,
-		      RB0, RB1, RB2, RB3, RB4, RB1, RB4, RB2, RB0, RB3);
-	ROUND (25, 1, RA1, RA4, RA2, RA0, RA3, RA2, RA1, RA0, RA4, RA3,
-		      RB1, RB4, RB2, RB0, RB3, RB2, RB1, RB0, RB4, RB3);
-	ROUND (26, 2, RA2, RA1, RA0, RA4, RA3, RA0, RA4, RA1, RA3, RA2,
-		      RB2, RB1, RB0, RB4, RB3, RB0, RB4, RB1, RB3, RB2);
-	ROUND (27, 3, RA0, RA4, RA1, RA3, RA2, RA4, RA1, RA3, RA2, RA0,
-		      RB0, RB4, RB1, RB3, RB2, RB4, RB1, RB3, RB2, RB0);
-	ROUND (28, 4, RA4, RA1, RA3, RA2, RA0, RA1, RA0, RA4, RA2, RA3,
-		      RB4, RB1, RB3, RB2, RB0, RB1, RB0, RB4, RB2, RB3);
-	ROUND (29, 5, RA1, RA0, RA4, RA2, RA3, RA0, RA2, RA1, RA4, RA3,
-		      RB1, RB0, RB4, RB2, RB3, RB0, RB2, RB1, RB4, RB3);
-	ROUND (30, 6, RA0, RA2, RA1, RA4, RA3, RA0, RA2, RA3, RA1, RA4,
-		      RB0, RB2, RB1, RB4, RB3, RB0, RB2, RB3, RB1, RB4);
-	ROUND_LAST (31, 7, RA0, RA2, RA3, RA1, RA4, RA4, RA1, RA2, RA0, RA3,
-		           RB0, RB2, RB3, RB1, RB4, RB4, RB1, RB2, RB0, RB3);
+	ROUND (0, 0, RA0, RA1, RA2, RA3, RA4, RA2, RA1, RA3, RA0, RA4,
+		     RB0, RB1, RB2, RB3, RB4, RB2, RB1, RB3, RB0, RB4);
+	ROUND (1, 1, RA2, RA1, RA3, RA0, RA4, RA4, RA3, RA0, RA2, RA1,
+		     RB2, RB1, RB3, RB0, RB4, RB4, RB3, RB0, RB2, RB1);
+	ROUND (2, 2, RA4, RA3, RA0, RA2, RA1, RA1, RA3, RA4, RA2, RA0,
+		     RB4, RB3, RB0, RB2, RB1, RB1, RB3, RB4, RB2, RB0);
+	ROUND (3, 3, RA1, RA3, RA4, RA2, RA0, RA2, RA0, RA3, RA1, RA4,
+		     RB1, RB3, RB4, RB2, RB0, RB2, RB0, RB3, RB1, RB4);
+	ROUND (4, 4, RA2, RA0, RA3, RA1, RA4, RA0, RA3, RA1, RA4, RA2,
+		     RB2, RB0, RB3, RB1, RB4, RB0, RB3, RB1, RB4, RB2);
+	ROUND (5, 5, RA0, RA3, RA1, RA4, RA2, RA2, RA0, RA3, RA4, RA1,
+		     RB0, RB3, RB1, RB4, RB2, RB2, RB0, RB3, RB4, RB1);
+	ROUND (6, 6, RA2, RA0, RA3, RA4, RA1, RA3, RA1, RA0, RA4, RA2,
+		     RB2, RB0, RB3, RB4, RB1, RB3, RB1, RB0, RB4, RB2);
+	ROUND (7, 7, RA3, RA1, RA0, RA4, RA2, RA2, RA0, RA4, RA3, RA1,
+		     RB3, RB1, RB0, RB4, RB2, RB2, RB0, RB4, RB3, RB1);
+	ROUND (8, 0, RA2, RA0, RA4, RA3, RA1, RA4, RA0, RA3, RA2, RA1,
+		     RB2, RB0, RB4, RB3, RB1, RB4, RB0, RB3, RB2, RB1);
+	ROUND (9, 1, RA4, RA0, RA3, RA2, RA1, RA1, RA3, RA2, RA4, RA0,
+		     RB4, RB0, RB3, RB2, RB1, RB1, RB3, RB2, RB4, RB0);
+	ROUND (10, 2, RA1, RA3, RA2, RA4, RA0, RA0, RA3, RA1, RA4, RA2,
+		      RB1, RB3, RB2, RB4, RB0, RB0, RB3, RB1, RB4, RB2);
+	ROUND (11, 3, RA0, RA3, RA1, RA4, RA2, RA4, RA2, RA3, RA0, RA1,
+		      RB0, RB3, RB1, RB4, RB2, RB4, RB2, RB3, RB0, RB1);
+	ROUND (12, 4, RA4, RA2, RA3, RA0, RA1, RA2, RA3, RA0, RA1, RA4,
+		      RB4, RB2, RB3, RB0, RB1, RB2, RB3, RB0, RB1, RB4);
+	ROUND (13, 5, RA2, RA3, RA0, RA1, RA4, RA4, RA2, RA3, RA1, RA0,
+		      RB2, RB3, RB0, RB1, RB4, RB4, RB2, RB3, RB1, RB0);
+	ROUND (14, 6, RA4, RA2, RA3, RA1, RA0, RA3, RA0, RA2, RA1, RA4,
+		      RB4, RB2, RB3, RB1, RB0, RB3, RB0, RB2, RB1, RB4);
+	ROUND (15, 7, RA3, RA0, RA2, RA1, RA4, RA4, RA2, RA1, RA3, RA0,
+		      RB3, RB0, RB2, RB1, RB4, RB4, RB2, RB1, RB3, RB0);
+	ROUND (16, 0, RA4, RA2, RA1, RA3, RA0, RA1, RA2, RA3, RA4, RA0,
+		      RB4, RB2, RB1, RB3, RB0, RB1, RB2, RB3, RB4, RB0);
+	ROUND (17, 1, RA1, RA2, RA3, RA4, RA0, RA0, RA3, RA4, RA1, RA2,
+		      RB1, RB2, RB3, RB4, RB0, RB0, RB3, RB4, RB1, RB2);
+	ROUND (18, 2, RA0, RA3, RA4, RA1, RA2, RA2, RA3, RA0, RA1, RA4,
+		      RB0, RB3, RB4, RB1, RB2, RB2, RB3, RB0, RB1, RB4);
+	ROUND (19, 3, RA2, RA3, RA0, RA1, RA4, RA1, RA4, RA3, RA2, RA0,
+		      RB2, RB3, RB0, RB1, RB4, RB1, RB4, RB3, RB2, RB0);
+	ROUND (20, 4, RA1, RA4, RA3, RA2, RA0, RA4, RA3, RA2, RA0, RA1,
+		      RB1, RB4, RB3, RB2, RB0, RB4, RB3, RB2, RB0, RB1);
+	ROUND (21, 5, RA4, RA3, RA2, RA0, RA1, RA1, RA4, RA3, RA0, RA2,
+		      RB4, RB3, RB2, RB0, RB1, RB1, RB4, RB3, RB0, RB2);
+	ROUND (22, 6, RA1, RA4, RA3, RA0, RA2, RA3, RA2, RA4, RA0, RA1,
+		      RB1, RB4, RB3, RB0, RB2, RB3, RB2, RB4, RB0, RB1);
+	ROUND (23, 7, RA3, RA2, RA4, RA0, RA1, RA1, RA4, RA0, RA3, RA2,
+		      RB3, RB2, RB4, RB0, RB1, RB1, RB4, RB0, RB3, RB2);
+	ROUND (24, 0, RA1, RA4, RA0, RA3, RA2, RA0, RA4, RA3, RA1, RA2,
+		      RB1, RB4, RB0, RB3, RB2, RB0, RB4, RB3, RB1, RB2);
+	ROUND (25, 1, RA0, RA4, RA3, RA1, RA2, RA2, RA3, RA1, RA0, RA4,
+		      RB0, RB4, RB3, RB1, RB2, RB2, RB3, RB1, RB0, RB4);
+	ROUND (26, 2, RA2, RA3, RA1, RA0, RA4, RA4, RA3, RA2, RA0, RA1,
+		      RB2, RB3, RB1, RB0, RB4, RB4, RB3, RB2, RB0, RB1);
+	ROUND (27, 3, RA4, RA3, RA2, RA0, RA1, RA0, RA1, RA3, RA4, RA2,
+		      RB4, RB3, RB2, RB0, RB1, RB0, RB1, RB3, RB4, RB2);
+	ROUND (28, 4, RA0, RA1, RA3, RA4, RA2, RA1, RA3, RA4, RA2, RA0,
+		      RB0, RB1, RB3, RB4, RB2, RB1, RB3, RB4, RB2, RB0);
+	ROUND (29, 5, RA1, RA3, RA4, RA2, RA0, RA0, RA1, RA3, RA2, RA4,
+		      RB1, RB3, RB4, RB2, RB0, RB0, RB1, RB3, RB2, RB4);
+	ROUND (30, 6, RA0, RA1, RA3, RA2, RA4, RA3, RA4, RA1, RA2, RA0,
+		      RB0, RB1, RB3, RB2, RB4, RB3, RB4, RB1, RB2, RB0);
+	ROUND_LAST (31, 7, RA3, RA4, RA1, RA2, RA0, RA0, RA1, RA2, RA3, RA4,
+		           RB3, RB4, RB1, RB2, RB0, RB0, RB1, RB2, RB3, RB4);
 
-	transpose_4x4(RA4, RA1, RA2, RA0);
-	transpose_4x4(RB4, RB1, RB2, RB0);
+	transpose_4x4(RA0, RA1, RA2, RA3);
+	transpose_4x4(RB0, RB1, RB2, RB3);
 
 	bx lr;
 .size __serpent_enc_blk8_neon,.-__serpent_enc_blk8_neon
@@ -513,7 +485,7 @@ __serpent_dec_blk8_neon:
 	 *	RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3: eight parallel
 	 * 						ciphertext blocks
 	 * output:
-	 *	RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3: eight parallel plaintext
+	 *	RA2, RA3, RA1, RA4, RB2, RB3, RB1, RB4: eight parallel plaintext
 	 *						blocks
 	 */
 
@@ -524,74 +496,74 @@ __serpent_dec_blk8_neon:
 	transpose_4x4(RB0, RB1, RB2, RB3);
 
 	ROUND_FIRST_INVERSE (31, 7, RA0, RA1, RA2, RA3, RA4,
-				    RA3, RA0, RA1, RA4, RA2,
+				    RA1, RA3, RA0, RA4, RA2,
 				    RB0, RB1, RB2, RB3, RB4,
-				    RB3, RB0, RB1, RB4, RB2);
-	ROUND_INVERSE (30, 6, RA3, RA0, RA1, RA4, RA2, RA0, RA1, RA2, RA4, RA3,
-		              RB3, RB0, RB1, RB4, RB2, RB0, RB1, RB2, RB4, RB3);
-	ROUND_INVERSE (29, 5, RA0, RA1, RA2, RA4, RA3, RA1, RA3, RA4, RA2, RA0,
-		              RB0, RB1, RB2, RB4, RB3, RB1, RB3, RB4, RB2, RB0);
-	ROUND_INVERSE (28, 4, RA1, RA3, RA4, RA2, RA0, RA1, RA2, RA4, RA0, RA3,
-		              RB1, RB3, RB4, RB2, RB0, RB1, RB2, RB4, RB0, RB3);
-	ROUND_INVERSE (27, 3, RA1, RA2, RA4, RA0, RA3, RA4, RA2, RA0, RA1, RA3,
-		              RB1, RB2, RB4, RB0, RB3, RB4, RB2, RB0, RB1, RB3);
-	ROUND_INVERSE (26, 2, RA4, RA2, RA0, RA1, RA3, RA2, RA3, RA0, RA1, RA4,
-		              RB4, RB2, RB0, RB1, RB3, RB2, RB3, RB0, RB1, RB4);
-	ROUND_INVERSE (25, 1, RA2, RA3, RA0, RA1, RA4, RA4, RA2, RA1, RA0, RA3,
-		              RB2, RB3, RB0, RB1, RB4, RB4, RB2, RB1, RB0, RB3);
-	ROUND_INVERSE (24, 0, RA4, RA2, RA1, RA0, RA3, RA4, RA3, RA2, RA0, RA1,
-		              RB4, RB2, RB1, RB0, RB3, RB4, RB3, RB2, RB0, RB1);
-	ROUND_INVERSE (23, 7, RA4, RA3, RA2, RA0, RA1, RA0, RA4, RA3, RA1, RA2,
-		              RB4, RB3, RB2, RB0, RB1, RB0, RB4, RB3, RB1, RB2);
-	ROUND_INVERSE (22, 6, RA0, RA4, RA3, RA1, RA2, RA4, RA3, RA2, RA1, RA0,
-		              RB0, RB4, RB3, RB1, RB2, RB4, RB3, RB2, RB1, RB0);
-	ROUND_INVERSE (21, 5, RA4, RA3, RA2, RA1, RA0, RA3, RA0, RA1, RA2, RA4,
-		              RB4, RB3, RB2, RB1, RB0, RB3, RB0, RB1, RB2, RB4);
-	ROUND_INVERSE (20, 4, RA3, RA0, RA1, RA2, RA4, RA3, RA2, RA1, RA4, RA0,
-		              RB3, RB0, RB1, RB2, RB4, RB3, RB2, RB1, RB4, RB0);
-	ROUND_INVERSE (19, 3, RA3, RA2, RA1, RA4, RA0, RA1, RA2, RA4, RA3, RA0,
-		              RB3, RB2, RB1, RB4, RB0, RB1, RB2, RB4, RB3, RB0);
-	ROUND_INVERSE (18, 2, RA1, RA2, RA4, RA3, RA0, RA2, RA0, RA4, RA3, RA1,
-		              RB1, RB2, RB4, RB3, RB0, RB2, RB0, RB4, RB3, RB1);
-	ROUND_INVERSE (17, 1, RA2, RA0, RA4, RA3, RA1, RA1, RA2, RA3, RA4, RA0,
-		              RB2, RB0, RB4, RB3, RB1, RB1, RB2, RB3, RB4, RB0);
-	ROUND_INVERSE (16, 0, RA1, RA2, RA3, RA4, RA0, RA1, RA0, RA2, RA4, RA3,
-		              RB1, RB2, RB3, RB4, RB0, RB1, RB0, RB2, RB4, RB3);
-	ROUND_INVERSE (15, 7, RA1, RA0, RA2, RA4, RA3, RA4, RA1, RA0, RA3, RA2,
-		              RB1, RB0, RB2, RB4, RB3, RB4, RB1, RB0, RB3, RB2);
-	ROUND_INVERSE (14, 6, RA4, RA1, RA0, RA3, RA2, RA1, RA0, RA2, RA3, RA4,
-		              RB4, RB1, RB0, RB3, RB2, RB1, RB0, RB2, RB3, RB4);
-	ROUND_INVERSE (13, 5, RA1, RA0, RA2, RA3, RA4, RA0, RA4, RA3, RA2, RA1,
-		              RB1, RB0, RB2, RB3, RB4, RB0, RB4, RB3, RB2, RB1);
-	ROUND_INVERSE (12, 4, RA0, RA4, RA3, RA2, RA1, RA0, RA2, RA3, RA1, RA4,
-		              RB0, RB4, RB3, RB2, RB1, RB0, RB2, RB3, RB1, RB4);
-	ROUND_INVERSE (11, 3, RA0, RA2, RA3, RA1, RA4, RA3, RA2, RA1, RA0, RA4,
-		              RB0, RB2, RB3, RB1, RB4, RB3, RB2, RB1, RB0, RB4);
-	ROUND_INVERSE (10, 2, RA3, RA2, RA1, RA0, RA4, RA2, RA4, RA1, RA0, RA3,
-		              RB3, RB2, RB1, RB0, RB4, RB2, RB4, RB1, RB0, RB3);
-	ROUND_INVERSE (9, 1, RA2, RA4, RA1, RA0, RA3, RA3, RA2, RA0, RA1, RA4,
-		             RB2, RB4, RB1, RB0, RB3, RB3, RB2, RB0, RB1, RB4);
-	ROUND_INVERSE (8, 0, RA3, RA2, RA0, RA1, RA4, RA3, RA4, RA2, RA1, RA0,
-		             RB3, RB2, RB0, RB1, RB4, RB3, RB4, RB2, RB1, RB0);
-	ROUND_INVERSE (7, 7, RA3, RA4, RA2, RA1, RA0, RA1, RA3, RA4, RA0, RA2,
-		             RB3, RB4, RB2, RB1, RB0, RB1, RB3, RB4, RB0, RB2);
-	ROUND_INVERSE (6, 6, RA1, RA3, RA4, RA0, RA2, RA3, RA4, RA2, RA0, RA1,
-		             RB1, RB3, RB4, RB0, RB2, RB3, RB4, RB2, RB0, RB1);
-	ROUND_INVERSE (5, 5, RA3, RA4, RA2, RA0, RA1, RA4, RA1, RA0, RA2, RA3,
-		             RB3, RB4, RB2, RB0, RB1, RB4, RB1, RB0, RB2, RB3);
-	ROUND_INVERSE (4, 4, RA4, RA1, RA0, RA2, RA3, RA4, RA2, RA0, RA3, RA1,
-		             RB4, RB1, RB0, RB2, RB3, RB4, RB2, RB0, RB3, RB1);
-	ROUND_INVERSE (3, 3, RA4, RA2, RA0, RA3, RA1, RA0, RA2, RA3, RA4, RA1,
-		             RB4, RB2, RB0, RB3, RB1, RB0, RB2, RB3, RB4, RB1);
-	ROUND_INVERSE (2, 2, RA0, RA2, RA3, RA4, RA1, RA2, RA1, RA3, RA4, RA0,
-		             RB0, RB2, RB3, RB4, RB1, RB2, RB1, RB3, RB4, RB0);
-	ROUND_INVERSE (1, 1, RA2, RA1, RA3, RA4, RA0, RA0, RA2, RA4, RA3, RA1,
-		             RB2, RB1, RB3, RB4, RB0, RB0, RB2, RB4, RB3, RB1);
-	ROUND_INVERSE (0, 0, RA0, RA2, RA4, RA3, RA1, RA0, RA1, RA2, RA3, RA4,
-		             RB0, RB2, RB4, RB3, RB1, RB0, RB1, RB2, RB3, RB4);
+				    RB1, RB3, RB0, RB4, RB2);
+	ROUND_INVERSE (30, 6, RA1, RA3, RA0, RA4, RA2, RA0, RA2, RA4, RA1, RA3,
+		              RB1, RB3, RB0, RB4, RB2, RB0, RB2, RB4, RB1, RB3);
+	ROUND_INVERSE (29, 5, RA0, RA2, RA4, RA1, RA3, RA2, RA3, RA0, RA4, RA1,
+		              RB0, RB2, RB4, RB1, RB3, RB2, RB3, RB0, RB4, RB1);
+	ROUND_INVERSE (28, 4, RA2, RA3, RA0, RA4, RA1, RA2, RA0, RA1, RA4, RA3,
+		              RB2, RB3, RB0, RB4, RB1, RB2, RB0, RB1, RB4, RB3);
+	ROUND_INVERSE (27, 3, RA2, RA0, RA1, RA4, RA3, RA1, RA2, RA3, RA4, RA0,
+		              RB2, RB0, RB1, RB4, RB3, RB1, RB2, RB3, RB4, RB0);
+	ROUND_INVERSE (26, 2, RA1, RA2, RA3, RA4, RA0, RA2, RA0, RA4, RA3, RA1,
+		              RB1, RB2, RB3, RB4, RB0, RB2, RB0, RB4, RB3, RB1);
+	ROUND_INVERSE (25, 1, RA2, RA0, RA4, RA3, RA1, RA1, RA0, RA4, RA3, RA2,
+		              RB2, RB0, RB4, RB3, RB1, RB1, RB0, RB4, RB3, RB2);
+	ROUND_INVERSE (24, 0, RA1, RA0, RA4, RA3, RA2, RA4, RA2, RA0, RA1, RA3,
+		              RB1, RB0, RB4, RB3, RB2, RB4, RB2, RB0, RB1, RB3);
+	ROUND_INVERSE (23, 7, RA4, RA2, RA0, RA1, RA3, RA2, RA1, RA4, RA3, RA0,
+		              RB4, RB2, RB0, RB1, RB3, RB2, RB1, RB4, RB3, RB0);
+	ROUND_INVERSE (22, 6, RA2, RA1, RA4, RA3, RA0, RA4, RA0, RA3, RA2, RA1,
+		              RB2, RB1, RB4, RB3, RB0, RB4, RB0, RB3, RB2, RB1);
+	ROUND_INVERSE (21, 5, RA4, RA0, RA3, RA2, RA1, RA0, RA1, RA4, RA3, RA2,
+		              RB4, RB0, RB3, RB2, RB1, RB0, RB1, RB4, RB3, RB2);
+	ROUND_INVERSE (20, 4, RA0, RA1, RA4, RA3, RA2, RA0, RA4, RA2, RA3, RA1,
+		              RB0, RB1, RB4, RB3, RB2, RB0, RB4, RB2, RB3, RB1);
+	ROUND_INVERSE (19, 3, RA0, RA4, RA2, RA3, RA1, RA2, RA0, RA1, RA3, RA4,
+		              RB0, RB4, RB2, RB3, RB1, RB2, RB0, RB1, RB3, RB4);
+	ROUND_INVERSE (18, 2, RA2, RA0, RA1, RA3, RA4, RA0, RA4, RA3, RA1, RA2,
+		              RB2, RB0, RB1, RB3, RB4, RB0, RB4, RB3, RB1, RB2);
+	ROUND_INVERSE (17, 1, RA0, RA4, RA3, RA1, RA2, RA2, RA4, RA3, RA1, RA0,
+		              RB0, RB4, RB3, RB1, RB2, RB2, RB4, RB3, RB1, RB0);
+	ROUND_INVERSE (16, 0, RA2, RA4, RA3, RA1, RA0, RA3, RA0, RA4, RA2, RA1,
+		              RB2, RB4, RB3, RB1, RB0, RB3, RB0, RB4, RB2, RB1);
+	ROUND_INVERSE (15, 7, RA3, RA0, RA4, RA2, RA1, RA0, RA2, RA3, RA1, RA4,
+		              RB3, RB0, RB4, RB2, RB1, RB0, RB2, RB3, RB1, RB4);
+	ROUND_INVERSE (14, 6, RA0, RA2, RA3, RA1, RA4, RA3, RA4, RA1, RA0, RA2,
+		              RB0, RB2, RB3, RB1, RB4, RB3, RB4, RB1, RB0, RB2);
+	ROUND_INVERSE (13, 5, RA3, RA4, RA1, RA0, RA2, RA4, RA2, RA3, RA1, RA0,
+		              RB3, RB4, RB1, RB0, RB2, RB4, RB2, RB3, RB1, RB0);
+	ROUND_INVERSE (12, 4, RA4, RA2, RA3, RA1, RA0, RA4, RA3, RA0, RA1, RA2,
+		              RB4, RB2, RB3, RB1, RB0, RB4, RB3, RB0, RB1, RB2);
+	ROUND_INVERSE (11, 3, RA4, RA3, RA0, RA1, RA2, RA0, RA4, RA2, RA1, RA3,
+		              RB4, RB3, RB0, RB1, RB2, RB0, RB4, RB2, RB1, RB3);
+	ROUND_INVERSE (10, 2, RA0, RA4, RA2, RA1, RA3, RA4, RA3, RA1, RA2, RA0,
+		              RB0, RB4, RB2, RB1, RB3, RB4, RB3, RB1, RB2, RB0);
+	ROUND_INVERSE (9, 1, RA4, RA3, RA1, RA2, RA0, RA0, RA3, RA1, RA2, RA4,
+		             RB4, RB3, RB1, RB2, RB0, RB0, RB3, RB1, RB2, RB4);
+	ROUND_INVERSE (8, 0, RA0, RA3, RA1, RA2, RA4, RA1, RA4, RA3, RA0, RA2,
+		             RB0, RB3, RB1, RB2, RB4, RB1, RB4, RB3, RB0, RB2);
+	ROUND_INVERSE (7, 7, RA1, RA4, RA3, RA0, RA2, RA4, RA0, RA1, RA2, RA3,
+		             RB1, RB4, RB3, RB0, RB2, RB4, RB0, RB1, RB2, RB3);
+	ROUND_INVERSE (6, 6, RA4, RA0, RA1, RA2, RA3, RA1, RA3, RA2, RA4, RA0,
+		             RB4, RB0, RB1, RB2, RB3, RB1, RB3, RB2, RB4, RB0);
+	ROUND_INVERSE (5, 5, RA1, RA3, RA2, RA4, RA0, RA3, RA0, RA1, RA2, RA4,
+		             RB1, RB3, RB2, RB4, RB0, RB3, RB0, RB1, RB2, RB4);
+	ROUND_INVERSE (4, 4, RA3, RA0, RA1, RA2, RA4, RA3, RA1, RA4, RA2, RA0,
+		             RB3, RB0, RB1, RB2, RB4, RB3, RB1, RB4, RB2, RB0);
+	ROUND_INVERSE (3, 3, RA3, RA1, RA4, RA2, RA0, RA4, RA3, RA0, RA2, RA1,
+		             RB3, RB1, RB4, RB2, RB0, RB4, RB3, RB0, RB2, RB1);
+	ROUND_INVERSE (2, 2, RA4, RA3, RA0, RA2, RA1, RA3, RA1, RA2, RA0, RA4,
+		             RB4, RB3, RB0, RB2, RB1, RB3, RB1, RB2, RB0, RB4);
+	ROUND_INVERSE (1, 1, RA3, RA1, RA2, RA0, RA4, RA4, RA1, RA2, RA0, RA3,
+		             RB3, RB1, RB2, RB0, RB4, RB4, RB1, RB2, RB0, RB3);
+	ROUND_INVERSE (0, 0, RA4, RA1, RA2, RA0, RA3, RA2, RA3, RA1, RA4, RA0,
+		             RB4, RB1, RB2, RB0, RB3, RB2, RB3, RB1, RB4, RB0);
 
-	transpose_4x4(RA0, RA1, RA2, RA3);
-	transpose_4x4(RB0, RB1, RB2, RB3);
+	transpose_4x4(RA2, RA3, RA1, RA4);
+	transpose_4x4(RB2, RB3, RB1, RB4);
 
 	bx lr;
 .size __serpent_dec_blk8_neon,.-__serpent_dec_blk8_neon
@@ -609,7 +581,7 @@ ENTRY(serpent_ecb_enc_8way_neon)
 
 	bl __serpent_enc_blk8_neon;
 
-	store_8way(%r1, RA4, RA1, RA2, RA0, RB4, RB1, RB2, RB0);
+	store_8way(%r1, RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3);
 
 	pop {r4-r11, ip, pc};
 ENDPROC(serpent_ecb_enc_8way_neon)
@@ -627,7 +599,7 @@ ENTRY(serpent_ecb_dec_8way_neon)
 
 	bl __serpent_dec_blk8_neon;
 
-	store_8way(%r1, RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3);
+	store_8way(%r1, RA2, RA3, RA1, RA4, RB2, RB3, RB1, RB4);
 
 	pop {r4-r11, ip, pc};
 ENDPROC(serpent_ecb_dec_8way_neon)
@@ -645,7 +617,7 @@ ENTRY(serpent_cbc_dec_8way_neon)
 
 	bl __serpent_dec_blk8_neon;
 
-	store_cbc_8way(%r2, %r1, RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3, RT0, RT1, RT2, RT3);
+	store_cbc_8way(%r2, %r1, RA2, RA3, RA1, RA4, RB2, RB3, RB1, RB4, RT0, RT1, RT2, RT3);
 
 	pop {r4-r11, ip, pc};
 ENDPROC(serpent_cbc_dec_8way_neon)
@@ -665,7 +637,7 @@ ENTRY(serpent_ctr_8way_neon)
 
 	bl __serpent_enc_blk8_neon;
 
-	store_ctr_8way(%r2, %r1, RA4, RA1, RA2, RA0, RB4, RB1, RB2, RB0,
+	store_ctr_8way(%r2, %r1, RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3,
 		       RT0, RT1, RT2, RT3);
 
 	pop {r4-r11, ip, pc};
@@ -689,7 +661,7 @@ ENTRY(serpent_xts_enc_8way_neon)
 	bl __serpent_enc_blk8_neon;
 
 	/* dst <= regs xor IVs(in dst) */
-	store_xts_8way(%r1, RA4, RA1, RA2, RA0, RB4, RB1, RB2, RB0,
+	store_xts_8way(%r1, RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3,
 		       RT0, RT1, RT2, RT3);
 
 	pop {r4-r11, ip, pc};
@@ -713,7 +685,7 @@ ENTRY(serpent_xts_dec_8way_neon)
 	bl __serpent_dec_blk8_neon;
 
 	/* dst <= regs xor IVs(in dst) */
-	store_xts_8way(%r1, RA0, RA1, RA2, RA3, RB0, RB1, RB2, RB3,
+	store_xts_8way(%r1, RA2, RA3, RA1, RA4, RB2, RB3, RB1, RB4,
 		       RT0, RT1, RT2, RT3);
 
 	pop {r4-r11, ip, pc};
