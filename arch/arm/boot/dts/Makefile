@@ -64,6 +64,7 @@ endif
 dtb-$(CONFIG_BCM2708_DT) += bcm2708-rpi-b.dtb
 dtb-$(CONFIG_BCM2708_DT) += bcm2708-rpi-b-plus.dtb
 dtb-$(CONFIG_BCM2709_DT) += bcm2709-rpi-2-b.dtb
+dtb-$(RPI_DT_OVERLAYS) += ads7846-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += bmp085_i2c-sensor-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += ds1307-rtc-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += enc28j60-overlay.dtb
@@ -84,6 +85,7 @@ dtb-$(RPI_DT_OVERLAYS) += piscreen-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += pitft28-resistive-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += pps-gpio-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += rpi-display-overlay.dtb
+dtb-$(RPI_DT_OVERLAYS) += tinylcd35-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += w1-gpio-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += w1-gpio-pullup-overlay.dtb
 dtb-$(RPI_DT_OVERLAYS) += spi-bcm2835-overlay.dtb
