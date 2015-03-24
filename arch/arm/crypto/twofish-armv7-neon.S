@@ -97,16 +97,6 @@
 #define RT5d1 d31
 
 /**********************************************************************
-  helper macros
- **********************************************************************/
-
-#define transpose_4x4(_q0, _q1, _q2, _q3) \
-	vtrn.32 _q0, _q1;	\
-	vtrn.32 _q2, _q3;	\
-	vswp _q0##d1, _q2##d0;	\
-	vswp _q1##d1, _q3##d0;
-
-/**********************************************************************
   8-way twofish
  **********************************************************************/
 
@@ -124,11 +114,11 @@
 	vld1.32 {t0##d0[0]}, [r4,:32];	add r9, CTXs2, r9, lsl #2; \
 	vld1.32 {t0##d0[1]}, [r5,:32];	add r10, CTXs3, r10, lsl #2; \
 	vld1.32 {t1##d0[0]}, [r6,:32];	add r11, CTXs3, r11, lsl #2; \
-	vld1.32 {t1##d0[1]}, [r7,:32]; \
-	vld1.32 {t2##d0[0]}, [r8,:32]; \
-	vld1.32 {t2##d0[1]}, [r9,:32];	vshl.u32 x, rv1, #(32 - 1); \
-	vld1.32 {t3##d0[0]}, [r10,:32];	vshr.u32 rv1, rv1, #1; \
-	vld1.32 {t3##d0[1]}, [r11,:32];	veor rv1, rv1, x; \
+	vld1.32 {t1##d0[1]}, [r7,:32];	vshl.u32 x, rv1, #(32 - 1); \
+	vld1.32 {t2##d0[0]}, [r8,:32];	vshr.u32 rv1, rv1, #1; \
+	vld1.32 {t2##d0[1]}, [r9,:32]; \
+	vld1.32 {t3##d0[0]}, [r10,:32]; \
+	vld1.32 {t3##d0[1]}, [r11,:32]; \
 	\
 	ldrb r4, [rt, #8]; \
 	ldrb r5, [rt, #12]; \
@@ -142,13 +132,13 @@
 	vld1.32 {t0##d1[1]}, [r5,:32];	add r10, CTXs3, r10, lsl #2; \
 	vld1.32 {t1##d1[0]}, [r6,:32];	add r11, CTXs3, r11, lsl #2; \
 	vld1.32 {t1##d1[1]}, [r7,:32]; \
-	vld1.32 {t2##d1[0]}, [r8,:32]; \
-	vld1.32 {t2##d1[1]}, [r9,:32];	veor x, t0, t1; \
-	vld1.32 {t3##d1[0]}, [r10,:32];	veor x,  x, t2; \
-	vld1.32 {t3##d1[1]}, [r11,:32];	veor x,  x, t3; \
+	vld1.32 {t2##d1[0]}, [r8,:32];	veor rv1, rv1, x; \
+	vld1.32 {t2##d1[1]}, [r9,:32];	veor x, t0, t1;\
+	vld1.32 {t3##d1[0]}, [r10,:32]; \
+	vld1.32 {t3##d1[1]}, [r11,:32]; \
 	\
 	/* Store next a */ \
-	vst1.32 {na}, [rt, :128]; \
+	vst1.32 {na}, [rt, :128];	veor x,  x, t2; \
 	\
 	/* Load b and left rotate rv */ \
 	ldrb r4, [rt, #16]; \
@@ -164,9 +154,9 @@
 	vld1.32 {t1##d0[0]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
 	vld1.32 {t1##d0[1]}, [r7,:32]; \
 	vld1.32 {t2##d0[0]}, [r8,:32]; \
-	vld1.32 {t2##d0[1]}, [r9,:32];	vshr.u32 y, rv2, #(32 - 1);\
-	vld1.32 {t3##d0[0]}, [r10,:32];	vshl.u32 rv2, rv2, #1; \
-	vld1.32 {t3##d0[1]}, [r11,:32];	veor rv2, rv2, y; \
+	vld1.32 {t2##d0[1]}, [r9,:32];	veor x,  x, t3; \
+	vld1.32 {t3##d0[0]}, [r10,:32]; \
+	vld1.32 {t3##d0[1]}, [r11,:32]; \
 	\
 	ldrb r4, [rt, #24]; \
 	ldrb r5, [rt, #28]; \
@@ -181,13 +171,15 @@
 	vld1.32 {t1##d1[0]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
 	vld1.32 {t1##d1[1]}, [r7,:32]; \
 	vld1.32 {t2##d1[0]}, [r8,:32]; \
-	vld1.32 {t2##d1[1]}, [r9,:32];	veor y, t0, t1; \
-	vld1.32 {t3##d1[0]}, [r10,:32];	veor y,  y, t2; \
-	vld1.32 {t3##d1[1]}, [r11,:32];	veor y,  y, t3; \
+	vld1.32 {t2##d1[1]}, [r9,:32]; \
+	vld1.32 {t3##d1[0]}, [r10,:32];	veor y, t0, t1;\
+					vshr.u32 t0, rv2, #(32 - 1); \
+	vld1.32 {t3##d1[1]}, [r11,:32];	vshl.u32 rv2, rv2, #1; \
 	\
 	/* Store next b */ \
-	add r4, rt, #16; \
-	vst1.32 {nb}, [r4, :128];
+	veor y,  y, t2;			add r4, rt, #16; \
+	vst1.32 {nb}, [r4, :128]; \
+	veor rv2, rv2, t0;		veor y,  y, t3;
 #else
 #define T_TABLE_LOOKUP(rt, a, b, rv1, rv2, x, y, na, nb, t0, t1, t2, t3) \
 	/* Load a and right rotate rv1 */ \
@@ -202,11 +194,11 @@
 	vld1.32 {t0##d0[0]}, [r4,:32];	add r9, CTXs1, r9, lsl #2; \
 	vld1.32 {t0##d0[1]}, [r5,:32];	add r10, CTXs0, r10, lsl #2; \
 	vld1.32 {t1##d0[0]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
-	vld1.32 {t1##d0[1]}, [r7,:32]; \
-	vld1.32 {t2##d0[0]}, [r8,:32]; \
-	vld1.32 {t2##d0[1]}, [r9,:32];	vshl.u32 x, rv1, #(32 - 1); \
-	vld1.32 {t3##d0[0]}, [r10,:32];	vshr.u32 rv1, rv1, #1; \
-	vld1.32 {t3##d0[1]}, [r11,:32];	veor rv1, rv1, x; \
+	vld1.32 {t1##d0[1]}, [r7,:32];	vshl.u32 x, rv1, #(32 - 1); \
+	vld1.32 {t2##d0[0]}, [r8,:32];	vshr.u32 rv1, rv1, #1; \
+	vld1.32 {t2##d0[1]}, [r9,:32]; \
+	vld1.32 {t3##d0[0]}, [r10,:32]; \
+	vld1.32 {t3##d0[1]}, [r11,:32]; \
 	\
 	ldrb r4, [rt, #8]; \
 	ldrb r5, [rt, #12]; \
@@ -220,15 +212,15 @@
 	vld1.32 {t0##d1[1]}, [r5,:32];	add r10, CTXs0, r10, lsl #2; \
 	vld1.32 {t1##d1[0]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
 	vld1.32 {t1##d1[1]}, [r7,:32]; \
-	vld1.32 {t2##d1[0]}, [r8,:32]; \
-	vld1.32 {t2##d1[1]}, [r9,:32];	veor x, t0, t1; \
-	vld1.32 {t3##d1[0]}, [r10,:32];	veor x,  x, t2; \
-	vld1.32 {t3##d1[1]}, [r11,:32];	veor x,  x, t3; \
+	vld1.32 {t2##d1[0]}, [r8,:32];	veor rv1, rv1, x; \
+	vld1.32 {t2##d1[1]}, [r9,:32];	veor x, t0, t1;\
+	vld1.32 {t3##d1[0]}, [r10,:32]; \
+	vld1.32 {t3##d1[1]}, [r11,:32]; \
 	\
 	/* Store next a */ \
-	vst1.32 {na}, [rt, :128]; \
+	vst1.32 {na}, [rt, :128];	veor x,  x, t2; \
 	\
-	/* Load b and left rotate rv2 */ \
+	/* Load b and left rotate rv */ \
 	ldrb r4, [rt, #16]; \
 	ldrb r5, [rt, #20]; \
 	ldrb r6, [rt, #17]; \
@@ -242,9 +234,9 @@
 	vld1.32 {t1##d0[0]}, [r6,:32];	add r11, CTXs1, r11, lsl #2; \
 	vld1.32 {t1##d0[1]}, [r7,:32]; \
 	vld1.32 {t2##d0[0]}, [r8,:32]; \
-	vld1.32 {t2##d0[1]}, [r9,:32];	vshr.u32 y, rv2, #(32 - 1); \
-	vld1.32 {t3##d0[0]}, [r10,:32];	vshl.u32 rv2, rv2, #1; \
-	vld1.32 {t3##d0[1]}, [r11,:32];	veor rv2, rv2, y; \
+	vld1.32 {t2##d0[1]}, [r9,:32];	veor x,  x, t3; \
+	vld1.32 {t3##d0[0]}, [r10,:32]; \
+	vld1.32 {t3##d0[1]}, [r11,:32]; \
 	\
 	ldrb r4, [rt, #24]; \
 	ldrb r5, [rt, #28]; \
@@ -259,50 +251,52 @@
 	vld1.32 {t1##d1[0]}, [r6,:32];	add r11, CTXs1, r11, lsl #2; \
 	vld1.32 {t1##d1[1]}, [r7,:32]; \
 	vld1.32 {t2##d1[0]}, [r8,:32]; \
-	vld1.32 {t2##d1[1]}, [r9,:32];	veor y, t0, t1; \
-	vld1.32 {t3##d1[0]}, [r10,:32];	veor y,  y, t2; \
-	vld1.32 {t3##d1[1]}, [r11,:32];	veor y,  y, t3; \
+	vld1.32 {t2##d1[1]}, [r9,:32]; \
+	vld1.32 {t3##d1[0]}, [r10,:32];	veor y, t0, t1;\
+					vshr.u32 t0, rv2, #(32 - 1); \
+	vld1.32 {t3##d1[1]}, [r11,:32];	vshl.u32 rv2, rv2, #1; \
 	\
 	/* Store next b */ \
-	add r4, rt, #16; \
-	vst1.32 {nb}, [r4, :128];
+	veor y,  y, t2;			add r4, rt, #16; \
+	vst1.32 {nb}, [r4, :128]; \
+	veor rv2, rv2, t0;		veor y,  y, t3;
 #endif
 
 /* Apply a Twofish round to eight parallel blocks */
 #define ENCRYPT_ROUND(n, x, y, c, d, rk, t0, t1, t2, t3) \
 	/* k[2*n + 1] */ \
-	vdup.32 t3, rk[1]; \
+	vdup.32 t2, rk[1]; \
 	/* x += y */ \
 	vadd.u32 x, x, y; \
 	/* k[2*n] */ \
-	vdup.32 t2, rk[0]; \
+	vdup.32 t1, rk[0]; \
 	/* x + k[2*n + 1] */ \
-	vadd.u32 t3, t3, x; \
-	/* x + k[2*n] */ \
 	vadd.u32 t2, t2, x; \
+	/* x + k[2*n] */ \
+	vadd.u32 t1, t1, x; \
 	/* y += x + k[2*n + 1] */ \
-	vadd.u32 y, y, t3; \
+	vadd.u32 y, y, t2; \
 	/* c ^= x + k[2*n] */ \
-	veor c, c, t2; \
+	veor c, c, t1; \
 	/* d ^= y */ \
 	veor d, d, y;
 
 /* Apply an inverse Twofish round to eight parallel blocks */
 #define DECRYPT_ROUND(n, x, y, c, d, rk, t0, t1, t2, t3) \
 	/* k[2*n + 1] */ \
-	vdup.32 t3, rk[1]; \
+	vdup.32 t2, rk[1]; \
 	/* x += y */ \
 	vadd.u32 x, x, y; \
 	/* k[2*n] */ \
-	vdup.32 t2, rk[0]; \
+	vdup.32 t1, rk[0]; \
 	/* x + k[2*n + 1] */ \
-	vadd.u32 t3, t3, x; \
-	/* x + k[2*n] */ \
 	vadd.u32 t2, t2, x; \
+	/* x + k[2*n] */ \
+	vadd.u32 t1, t1, x; \
 	/* y += x + k[2*n + 1] */ \
-	vadd.u32 y, y, t3; \
+	vadd.u32 y, y, t2; \
 	/* c ^= x + k[2*n] */ \
-	veor c, c, t2; \
+	veor c, c, t1; \
 	/* d ^= y */ \
 	veor d, d, y;
 
@@ -354,13 +348,15 @@ __twofish_enc_blk8_neon:
 	veor RA2, RA2, RT0;	veor RB2, RB2, RT0;
 	veor RA3, RA3, RT0;	veor RB3, RB3, RT0;
 
-	transpose_4x4(RA0, RA1, RA2, RA3);
+	/* Transpose 4x4 */
+	vtrn.32 RA0, RA1;	vtrn.32 RB0, RB1;
+	vtrn.32 RA2, RA3;	vtrn.32 RB2, RB3;
+	vswp RA0d1, RA2d0;	vswp RB0d1, RB2d0;
+	vswp RA1d1, RA3d0;	vswp RB1d1, RB3d0;
 
 	/* Store a and b */
 	vst1.32 {RA0}, [r9, :128];
 	vst1.32 {RA1}, [r11, :128];
-
-	transpose_4x4(RB0, RB1, RB2, RB3);
 
 	/* Rounds */
 	vld1.32 {RT4}, [RROUND, :64]!;
@@ -471,8 +467,11 @@ __twofish_enc_blk8_neon:
 	vshr.u32 RB0, RB0, #1;
 	veor RB0, RB0, RX;
 
-	transpose_4x4(RA2, RA3, RA0, RA1);
-	transpose_4x4(RB2, RB3, RB0, RB1);
+	/* Transpose 4x4 */
+	vtrn.32 RA2, RA3;	vtrn.32 RB2, RB3;
+	vtrn.32 RA0, RA1;	vtrn.32 RB0, RB1;
+	vswp RA2d1, RA0d0;	vswp RB2d1, RB0d0;
+	vswp RA3d1, RA1d0;	vswp RB3d1, RB1d0;
 
 	/* Output whitening */
 	veor RA2, RA2, RT0;	veor RB2, RB2, RT0;
@@ -541,13 +540,15 @@ __twofish_dec_blk8_neon:
 	veor RA0, RA0, RT0;	veor RB0, RB0, RT0;
 	veor RA1, RA1, RT0;	veor RB1, RB1, RT0;
 
-	transpose_4x4(RA2, RA3, RA0, RA1);
+	/* Transpose 4x4 */
+	vtrn.32 RA2, RA3;	vtrn.32 RB2, RB3;
+	vtrn.32 RA0, RA1;	vtrn.32 RB0, RB1;
+	vswp RA2d1, RA0d0;	vswp RB2d1, RB0d0;
+	vswp RA3d1, RA1d0;	vswp RB3d1, RB1d0;
 
 	/* Store a and b */
 	vst1.32 {RA2}, [r9, :128];
 	vst1.32 {RA3}, [r11, :128];
-
-	transpose_4x4(RB2, RB3, RB0, RB1);
 
 	/* Rounds */
 	vld1.32 {RT4}, [RROUND, :64];
@@ -672,8 +673,11 @@ __twofish_dec_blk8_neon:
 	vshr.u32 RB3, RB3, #1;
 	veor RB3, RB3, RX;
 
-	transpose_4x4(RA0, RA1, RA2, RA3);
-	transpose_4x4(RB0, RB1, RB2, RB3);
+	/* Transpose 4x4 */
+	vtrn.32 RA0, RA1;	vtrn.32 RB0, RB1;
+	vtrn.32 RA2, RA3;	vtrn.32 RB2, RB3;
+	vswp RA0d1, RA2d0;	vswp RB0d1, RB2d0;
+	vswp RA1d1, RA3d0;	vswp RB1d1, RB3d0;
 
 	/* Output whitening */
 	veor RA0, RA0, RT0;	veor RB0, RB0, RT0;
