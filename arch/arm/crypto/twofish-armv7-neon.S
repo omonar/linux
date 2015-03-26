@@ -104,160 +104,142 @@
 #define T_TABLE_LOOKUP(rt, a, b, rv1, rv2, x, y, na, nb, t0, t1, t2, t3) \
 	/* Load a and right rotate rv1 */ \
 	ldrb r4, [rt, #0]; \
-	ldrb r5, [rt, #4]; \
-	ldrb r6, [rt, #1]; \
+	ldrb r5, [rt, #1]; \
+	ldrb r6, [rt, #4]; \
 	ldrb r7, [rt, #5];		add r4, CTXs0, r4, lsl #2; \
-	ldrb r8, [rt, #2];		add r5, CTXs0, r5, lsl #2; \
-	ldrb r9, [rt, #6];		add r6, CTXs1, r6, lsl #2; \
-	ldrb r10, [rt, #3];		add r7, CTXs1, r7, lsl #2; \
+	ldrb r8, [rt, #2];		add r5, CTXs1, r5, lsl #2; \
+	ldrb r9, [rt, #3];		add r6, CTXs0, r6, lsl #2; \
+	ldrb r10, [rt, #6];		add r7, CTXs1, r7, lsl #2; \
 	ldrb r11, [rt, #7];		add r8, CTXs2, r8, lsl #2; \
-	vld1.32 {t0##d0[0]}, [r4,:32];	add r9, CTXs2, r9, lsl #2; \
-	vld1.32 {t0##d0[1]}, [r5,:32];	add r10, CTXs3, r10, lsl #2; \
-	vld1.32 {t1##d0[0]}, [r6,:32];	add r11, CTXs3, r11, lsl #2; \
+	vld1.32 {t0##d0[0]}, [r4,:32];	add r9, CTXs3, r9, lsl #2; \
+	vld1.32 {t1##d0[0]}, [r5,:32];	add r10, CTXs2, r10, lsl #2; \
+	vld1.32 {t0##d0[1]}, [r6,:32];	add r11, CTXs3, r11, lsl #2; \
 	vld1.32 {t1##d0[1]}, [r7,:32];	vshl.u32 x, rv1, #(32 - 1); \
 	vld1.32 {t2##d0[0]}, [r8,:32];	vshr.u32 rv1, rv1, #1; \
-	vld1.32 {t2##d0[1]}, [r9,:32]; \
-	vld1.32 {t3##d0[0]}, [r10,:32]; \
-	vld1.32 {t3##d0[1]}, [r11,:32]; \
+	vld1.32 {t3##d0[0]}, [r9,:32];	ldrb r4, [rt, #8]; \
+	vld1.32 {t2##d0[1]}, [r10,:32];	ldrb r5, [rt, #9]; \
+	vld1.32 {t3##d0[1]}, [r11,:32];	ldrb r6, [rt, #12]; \
 	\
-	ldrb r4, [rt, #8]; \
-	ldrb r5, [rt, #12]; \
-	ldrb r6, [rt, #9]; \
 	ldrb r7, [rt, #13];		add r4, CTXs0, r4, lsl #2; \
-	ldrb r8, [rt, #10];		add r5, CTXs0, r5, lsl #2; \
-	ldrb r9, [rt, #14];		add r6, CTXs1, r6, lsl #2; \
-	ldrb r10, [rt, #11];		add r7, CTXs1, r7, lsl #2; \
+	ldrb r8, [rt, #10];		add r5, CTXs1, r5, lsl #2; \
+	ldrb r9, [rt, #11];		add r6, CTXs0, r6, lsl #2; \
+	ldrb r10, [rt, #14];		add r7, CTXs1, r7, lsl #2; \
 	ldrb r11, [rt, #15];		add r8, CTXs2, r8, lsl #2; \
-	vld1.32 {t0##d1[0]}, [r4,:32];	add r9, CTXs2, r9, lsl #2; \
-	vld1.32 {t0##d1[1]}, [r5,:32];	add r10, CTXs3, r10, lsl #2; \
-	vld1.32 {t1##d1[0]}, [r6,:32];	add r11, CTXs3, r11, lsl #2; \
-	vld1.32 {t1##d1[1]}, [r7,:32]; \
+	vld1.32 {t0##d1[0]}, [r4,:32];	add r9, CTXs3, r9, lsl #2; \
+	vld1.32 {t1##d1[0]}, [r5,:32];	add r10, CTXs2, r10, lsl #2; \
+	vld1.32 {t0##d1[1]}, [r6,:32];	add r11, CTXs3, r11, lsl #2; \
+	vld1.32 {t1##d1[1]}, [r7,:32];	ldrb r4, [rt, #16]; \
 	vld1.32 {t2##d1[0]}, [r8,:32];	veor rv1, rv1, x; \
-	vld1.32 {t2##d1[1]}, [r9,:32];	veor x, t0, t1;\
-	vld1.32 {t3##d1[0]}, [r10,:32]; \
-	vld1.32 {t3##d1[1]}, [r11,:32]; \
+	vld1.32 {t3##d1[0]}, [r9,:32];	veor x, t0, t1;\
+	vld1.32 {t2##d1[1]}, [r10,:32];	ldrb r5, [rt, #17]; \
+	vld1.32 {t3##d1[1]}, [r11,:32];	ldrb r6, [rt, #20]; \
 	\
 	/* Store next a */ \
 	vst1.32 {na}, [rt, :128];	veor x,  x, t2; \
 	\
 	/* Load b and left rotate rv */ \
-	ldrb r4, [rt, #16]; \
-	ldrb r5, [rt, #20]; \
-	ldrb r6, [rt, #17]; \
 	ldrb r7, [rt, #21];		add r4, CTXs1, r4, lsl #2; \
-	ldrb r8, [rt, #18];		add r5, CTXs1, r5, lsl #2; \
-	ldrb r9, [rt, #22];		add r6, CTXs2, r6, lsl #2; \
-	ldrb r10, [rt, #19];		add r7, CTXs2, r7, lsl #2; \
+	ldrb r8, [rt, #18];		add r5, CTXs2, r5, lsl #2; \
+	ldrb r9, [rt, #19];		add r6, CTXs1, r6, lsl #2; \
+	ldrb r10, [rt, #22];		add r7, CTXs2, r7, lsl #2; \
 	ldrb r11, [rt, #23];		add r8, CTXs3, r8, lsl #2; \
-	vld1.32 {t0##d0[0]}, [r4,:32];	add r9, CTXs3, r9, lsl #2; \
-	vld1.32 {t0##d0[1]}, [r5,:32];	add r10, CTXs0, r10, lsl #2; \
-	vld1.32 {t1##d0[0]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
+	vld1.32 {t0##d0[0]}, [r4,:32];	add r9, CTXs0, r9, lsl #2; \
+	vld1.32 {t1##d0[0]}, [r5,:32];	add r10, CTXs3, r10, lsl #2; \
+	vld1.32 {t0##d0[1]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
 	vld1.32 {t1##d0[1]}, [r7,:32]; \
-	vld1.32 {t2##d0[0]}, [r8,:32]; \
-	vld1.32 {t2##d0[1]}, [r9,:32];	veor x,  x, t3; \
-	vld1.32 {t3##d0[0]}, [r10,:32]; \
-	vld1.32 {t3##d0[1]}, [r11,:32]; \
+	vld1.32 {t2##d0[0]}, [r8,:32];	veor x,  x, t3; \
+	vld1.32 {t3##d0[0]}, [r9,:32];	ldrb r4, [rt, #24]; \
+	vld1.32 {t2##d0[1]}, [r10,:32];	ldrb r5, [rt, #25]; \
+	vld1.32 {t3##d0[1]}, [r11,:32];	ldrb r6, [rt, #28]; \
 	\
-	ldrb r4, [rt, #24]; \
-	ldrb r5, [rt, #28]; \
-	ldrb r6, [rt, #25]; \
 	ldrb r7, [rt, #29];		add r4, CTXs1, r4, lsl #2; \
-	ldrb r8, [rt, #26];		add r5, CTXs1, r5, lsl #2; \
-	ldrb r9, [rt, #30];		add r6, CTXs2, r6, lsl #2; \
-	ldrb r10, [rt, #27];		add r7, CTXs2, r7, lsl #2; \
+	ldrb r8, [rt, #26];		add r5, CTXs2, r5, lsl #2; \
+	ldrb r9, [rt, #27];		add r6, CTXs1, r6, lsl #2; \
+	ldrb r10, [rt, #30];		add r7, CTXs2, r7, lsl #2; \
 	ldrb r11, [rt, #31];		add r8, CTXs3, r8, lsl #2; \
-	vld1.32 {t0##d1[0]}, [r4,:32];	add r9, CTXs3, r9, lsl #2; \
-	vld1.32 {t0##d1[1]}, [r5,:32];	add r10, CTXs0, r10, lsl #2; \
-	vld1.32 {t1##d1[0]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
-	vld1.32 {t1##d1[1]}, [r7,:32]; \
+	vld1.32 {t0##d1[0]}, [r4,:32];	add r9, CTXs0, r9, lsl #2; \
+	vld1.32 {t1##d1[0]}, [r5,:32];	add r10, CTXs3, r10, lsl #2; \
+	vld1.32 {t0##d1[1]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
+	vld1.32 {t1##d1[1]}, [r7,:32];	add r4, rt, #16; \
 	vld1.32 {t2##d1[0]}, [r8,:32]; \
-	vld1.32 {t2##d1[1]}, [r9,:32]; \
-	vld1.32 {t3##d1[0]}, [r10,:32];	veor y, t0, t1;\
+	vld1.32 {t3##d1[0]}, [r9,:32]; \
+	vld1.32 {t2##d1[1]}, [r10,:32];	veor y, t0, t1;\
 					vshr.u32 t0, rv2, #(32 - 1); \
 	vld1.32 {t3##d1[1]}, [r11,:32];	vshl.u32 rv2, rv2, #1; \
 	\
 	/* Store next b */ \
-	veor y,  y, t2;			add r4, rt, #16; \
+	veor y,  y, t2; \
 	vst1.32 {nb}, [r4, :128]; \
 	veor rv2, rv2, t0;		veor y,  y, t3;
 #else
 #define T_TABLE_LOOKUP(rt, a, b, rv1, rv2, x, y, na, nb, t0, t1, t2, t3) \
 	/* Load a and right rotate rv1 */ \
 	ldrb r4, [rt, #0]; \
-	ldrb r5, [rt, #4]; \
-	ldrb r6, [rt, #1]; \
+	ldrb r5, [rt, #1]; \
+	ldrb r6, [rt, #4]; \
 	ldrb r7, [rt, #5];		add r4, CTXs3, r4, lsl #2; \
-	ldrb r8, [rt, #2];		add r5, CTXs3, r5, lsl #2; \
-	ldrb r9, [rt, #6];		add r6, CTXs2, r6, lsl #2; \
-	ldrb r10, [rt, #3];		add r7, CTXs2, r7, lsl #2; \
+	ldrb r8, [rt, #2];		add r5, CTXs2, r5, lsl #2; \
+	ldrb r9, [rt, #3];		add r6, CTXs3, r6, lsl #2; \
+	ldrb r10, [rt, #6];		add r7, CTXs2, r7, lsl #2; \
 	ldrb r11, [rt, #7];		add r8, CTXs1, r8, lsl #2; \
-	vld1.32 {t0##d0[0]}, [r4,:32];	add r9, CTXs1, r9, lsl #2; \
-	vld1.32 {t0##d0[1]}, [r5,:32];	add r10, CTXs0, r10, lsl #2; \
-	vld1.32 {t1##d0[0]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
+	vld1.32 {t0##d0[0]}, [r4,:32];	add r9, CTXs0, r9, lsl #2; \
+	vld1.32 {t1##d0[0]}, [r5,:32];	add r10, CTXs1, r10, lsl #2; \
+	vld1.32 {t0##d0[1]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
 	vld1.32 {t1##d0[1]}, [r7,:32];	vshl.u32 x, rv1, #(32 - 1); \
 	vld1.32 {t2##d0[0]}, [r8,:32];	vshr.u32 rv1, rv1, #1; \
-	vld1.32 {t2##d0[1]}, [r9,:32]; \
-	vld1.32 {t3##d0[0]}, [r10,:32]; \
-	vld1.32 {t3##d0[1]}, [r11,:32]; \
+	vld1.32 {t3##d0[0]}, [r9,:32];	ldrb r4, [rt, #8]; \
+	vld1.32 {t2##d0[1]}, [r10,:32];	ldrb r5, [rt, #9]; \
+	vld1.32 {t3##d0[1]}, [r11,:32];	ldrb r6, [rt, #12]; \
 	\
-	ldrb r4, [rt, #8]; \
-	ldrb r5, [rt, #12]; \
-	ldrb r6, [rt, #9]; \
 	ldrb r7, [rt, #13];		add r4, CTXs3, r4, lsl #2; \
-	ldrb r8, [rt, #10];		add r5, CTXs3, r5, lsl #2; \
-	ldrb r9, [rt, #14];		add r6, CTXs2, r6, lsl #2; \
-	ldrb r10, [rt, #11];		add r7, CTXs2, r7, lsl #2; \
+	ldrb r8, [rt, #10];		add r5, CTXs2, r5, lsl #2; \
+	ldrb r9, [rt, #11];		add r6, CTXs3, r6, lsl #2; \
+	ldrb r10, [rt, #14];		add r7, CTXs2, r7, lsl #2; \
 	ldrb r11, [rt, #15];		add r8, CTXs1, r8, lsl #2; \
-	vld1.32 {t0##d1[0]}, [r4,:32];	add r9, CTXs1, r9, lsl #2; \
-	vld1.32 {t0##d1[1]}, [r5,:32];	add r10, CTXs0, r10, lsl #2; \
-	vld1.32 {t1##d1[0]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
-	vld1.32 {t1##d1[1]}, [r7,:32]; \
+	vld1.32 {t0##d1[0]}, [r4,:32];	add r9, CTXs0, r9, lsl #2; \
+	vld1.32 {t1##d1[0]}, [r5,:32];	add r10, CTXs1, r10, lsl #2; \
+	vld1.32 {t0##d1[1]}, [r6,:32];	add r11, CTXs0, r11, lsl #2; \
+	vld1.32 {t1##d1[1]}, [r7,:32];	ldrb r4, [rt, #16]; \
 	vld1.32 {t2##d1[0]}, [r8,:32];	veor rv1, rv1, x; \
-	vld1.32 {t2##d1[1]}, [r9,:32];	veor x, t0, t1;\
-	vld1.32 {t3##d1[0]}, [r10,:32]; \
-	vld1.32 {t3##d1[1]}, [r11,:32]; \
+	vld1.32 {t3##d1[0]}, [r9,:32];	veor x, t0, t1;\
+	vld1.32 {t2##d1[1]}, [r10,:32];	ldrb r5, [rt, #17]; \
+	vld1.32 {t3##d1[1]}, [r11,:32];	ldrb r6, [rt, #20]; \
 	\
 	/* Store next a */ \
 	vst1.32 {na}, [rt, :128];	veor x,  x, t2; \
 	\
 	/* Load b and left rotate rv */ \
-	ldrb r4, [rt, #16]; \
-	ldrb r5, [rt, #20]; \
-	ldrb r6, [rt, #17]; \
 	ldrb r7, [rt, #21];		add r4, CTXs0, r4, lsl #2; \
-	ldrb r8, [rt, #18];		add r5, CTXs0, r5, lsl #2; \
-	ldrb r9, [rt, #22];		add r6, CTXs3, r6, lsl #2; \
-	ldrb r10, [rt, #19];		add r7, CTXs3, r7, lsl #2; \
+	ldrb r8, [rt, #18];		add r5, CTXs3, r5, lsl #2; \
+	ldrb r9, [rt, #19];		add r6, CTXs0, r6, lsl #2; \
+	ldrb r10, [rt, #22];		add r7, CTXs3, r7, lsl #2; \
 	ldrb r11, [rt, #23];		add r8, CTXs2, r8, lsl #2; \
-	vld1.32 {t0##d0[0]}, [r4,:32];	add r9, CTXs2, r9, lsl #2; \
-	vld1.32 {t0##d0[1]}, [r5,:32];	add r10, CTXs1, r10, lsl #2; \
-	vld1.32 {t1##d0[0]}, [r6,:32];	add r11, CTXs1, r11, lsl #2; \
+	vld1.32 {t0##d0[0]}, [r4,:32];	add r9, CTXs1, r9, lsl #2; \
+	vld1.32 {t1##d0[0]}, [r5,:32];	add r10, CTXs2, r10, lsl #2; \
+	vld1.32 {t0##d0[1]}, [r6,:32];	add r11, CTXs1, r11, lsl #2; \
 	vld1.32 {t1##d0[1]}, [r7,:32]; \
-	vld1.32 {t2##d0[0]}, [r8,:32]; \
-	vld1.32 {t2##d0[1]}, [r9,:32];	veor x,  x, t3; \
-	vld1.32 {t3##d0[0]}, [r10,:32]; \
-	vld1.32 {t3##d0[1]}, [r11,:32]; \
+	vld1.32 {t2##d0[0]}, [r8,:32];	veor x,  x, t3; \
+	vld1.32 {t3##d0[0]}, [r9,:32];	ldrb r4, [rt, #24]; \
+	vld1.32 {t2##d0[1]}, [r10,:32];	ldrb r5, [rt, #25]; \
+	vld1.32 {t3##d0[1]}, [r11,:32];	ldrb r6, [rt, #28]; \
 	\
-	ldrb r4, [rt, #24]; \
-	ldrb r5, [rt, #28]; \
-	ldrb r6, [rt, #25]; \
 	ldrb r7, [rt, #29];		add r4, CTXs0, r4, lsl #2; \
-	ldrb r8, [rt, #26];		add r5, CTXs0, r5, lsl #2; \
-	ldrb r9, [rt, #30];		add r6, CTXs3, r6, lsl #2; \
-	ldrb r10, [rt, #27];		add r7, CTXs3, r7, lsl #2; \
+	ldrb r8, [rt, #26];		add r5, CTXs3, r5, lsl #2; \
+	ldrb r9, [rt, #27];		add r6, CTXs0, r6, lsl #2; \
+	ldrb r10, [rt, #30];		add r7, CTXs3, r7, lsl #2; \
 	ldrb r11, [rt, #31];		add r8, CTXs2, r8, lsl #2; \
-	vld1.32 {t0##d1[0]}, [r4,:32];	add r9, CTXs2, r9, lsl #2; \
-	vld1.32 {t0##d1[1]}, [r5,:32];	add r10, CTXs1, r10, lsl #2; \
-	vld1.32 {t1##d1[0]}, [r6,:32];	add r11, CTXs1, r11, lsl #2; \
-	vld1.32 {t1##d1[1]}, [r7,:32]; \
+	vld1.32 {t0##d1[0]}, [r4,:32];	add r9, CTXs1, r9, lsl #2; \
+	vld1.32 {t1##d1[0]}, [r5,:32];	add r10, CTXs2, r10, lsl #2; \
+	vld1.32 {t0##d1[1]}, [r6,:32];	add r11, CTXs1, r11, lsl #2; \
+	vld1.32 {t1##d1[1]}, [r7,:32];	add r4, rt, #16; \
 	vld1.32 {t2##d1[0]}, [r8,:32]; \
-	vld1.32 {t2##d1[1]}, [r9,:32]; \
-	vld1.32 {t3##d1[0]}, [r10,:32];	veor y, t0, t1;\
+	vld1.32 {t3##d1[0]}, [r9,:32]; \
+	vld1.32 {t2##d1[1]}, [r10,:32];	veor y, t0, t1;\
 					vshr.u32 t0, rv2, #(32 - 1); \
 	vld1.32 {t3##d1[1]}, [r11,:32];	vshl.u32 rv2, rv2, #1; \
 	\
 	/* Store next b */ \
-	veor y,  y, t2;			add r4, rt, #16; \
+	veor y,  y, t2; \
 	vst1.32 {nb}, [r4, :128]; \
 	veor rv2, rv2, t0;		veor y,  y, t3;
 #endif
