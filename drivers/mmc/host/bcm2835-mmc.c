@@ -42,10 +42,6 @@
 #include "sdhci.h"
 
 
-#ifndef CONFIG_ARCH_BCM2835
- #define BCM2835_CLOCK_FREQ 250000000
-#endif
-
 #define DRIVER_NAME "mmc-bcm2835"
 
 #define DBG(f, x...) \
@@ -74,6 +70,9 @@ pr_debug(DRIVER_NAME " [%s()]: " f, __func__, ## x)
 /* FIXME: Needs IOMMU support */
 #define BCM2835_VCMMU_SHIFT		(0x7E000000 - BCM2708_PERI_BASE)
 
+
+/*static */unsigned mmc_debug;
+/*static */unsigned mmc_debug2;
 
 struct bcm2835_host {
 	spinlock_t				lock;
@@ -136,22 +135,38 @@ struct bcm2835_host {
 #define SDHCI_PV_ENABLED	(1<<8)	/* Preset value enabled */
 #define SDHCI_SDIO_IRQ_ENABLED	(1<<9)	/* SDIO irq enabled */
 #define SDHCI_USE_PLATDMA       (1<<12) /* Host uses 3rd party DMA */
+
+	u32				overclock_50;	/* frequency to use when 50MHz is requested (in MHz) */
+	u32				max_overclock;	/* Highest reported */
 };
 
 
-static inline void bcm2835_mmc_writel(struct bcm2835_host *host, u32 val, int reg)
+static inline void bcm2835_mmc_writel(struct bcm2835_host *host, u32 val, int reg, int from)
 {
+	u32 delay;
+	lockdep_assert_held_once(&host->lock);
 	writel(val, host->ioaddr + reg);
 	udelay(BCM2835_SDHCI_WRITE_DELAY(max(host->clock, MIN_FREQ)));
+
+	delay = ((mmc_debug >> 16) & 0xf) << ((mmc_debug >> 20) & 0xf);
+	if (delay && !((1<<from) & mmc_debug2))
+		udelay(delay);
 }
 
 static inline void mmc_raw_writel(struct bcm2835_host *host, u32 val, int reg)
 {
+	u32 delay;
+	lockdep_assert_held_once(&host->lock);
 	writel(val, host->ioaddr + reg);
+
+	delay = ((mmc_debug >> 24) & 0xf) << ((mmc_debug >> 28) & 0xf);
+	if (delay)
+		udelay(delay);
 }
 
 static inline u32 bcm2835_mmc_readl(struct bcm2835_host *host, int reg)
 {
+	lockdep_assert_held_once(&host->lock);
 	return readl(host->ioaddr + reg);
 }
 
@@ -167,7 +182,7 @@ static inline void bcm2835_mmc_writew(struct bcm2835_host *host, u16 val, int re
 	if (reg == SDHCI_TRANSFER_MODE)
 		host->shadow = newval;
 	else
-		bcm2835_mmc_writel(host, newval, reg & ~3);
+		bcm2835_mmc_writel(host, newval, reg & ~3, 0);
 
 }
 
@@ -179,7 +194,7 @@ static inline void bcm2835_mmc_writeb(struct bcm2835_host *host, u8 val, int reg
 	u32 mask = 0xff << byte_shift;
 	u32 newval = (oldval & ~mask) | (val << byte_shift);
 
-	bcm2835_mmc_writel(host, newval, reg & ~3);
+	bcm2835_mmc_writel(host, newval, reg & ~3, 1);
 }
 
 
@@ -211,7 +226,7 @@ static void bcm2835_mmc_unsignal_irqs(struct bcm2835_host *host, u32 clear)
 	ier &= ~clear;
 	/* change which requests generate IRQs - makes no difference to
 	   the content of SDHCI_INT_STATUS, or the need to acknowledge IRQs */
-	bcm2835_mmc_writel(host, ier, SDHCI_SIGNAL_ENABLE);
+	bcm2835_mmc_writel(host, ier, SDHCI_SIGNAL_ENABLE, 2);
 }
 
 
@@ -263,7 +278,9 @@ static void bcm2835_mmc_dumpregs(struct bcm2835_host *host)
 static void bcm2835_mmc_reset(struct bcm2835_host *host, u8 mask)
 {
 	unsigned long timeout;
+	unsigned long flags;
 
+	spin_lock_irqsave(&host->lock, flags);
 	bcm2835_mmc_writeb(host, mask, SDHCI_SOFTWARE_RESET);
 
 	if (mask & SDHCI_RESET_ALL)
@@ -281,19 +298,23 @@ static void bcm2835_mmc_reset(struct bcm2835_host *host, u8 mask)
 			return;
 		}
 		timeout--;
+		spin_unlock_irqrestore(&host->lock, flags);
 		mdelay(1);
+		spin_lock_irqsave(&host->lock, flags);
 	}
 
 	if (100-timeout > 10 && 100-timeout > host->max_delay) {
 		host->max_delay = 100-timeout;
 		pr_warning("Warning: MMC controller hung for %d ms\n", host->max_delay);
 	}
+	spin_unlock_irqrestore(&host->lock, flags);
 }
 
 static void bcm2835_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios);
 
 static void bcm2835_mmc_init(struct bcm2835_host *host, int soft)
 {
+	unsigned long flags;
 	if (soft)
 		bcm2835_mmc_reset(host, SDHCI_RESET_CMD|SDHCI_RESET_DATA);
 	else
@@ -305,8 +326,10 @@ static void bcm2835_mmc_init(struct bcm2835_host *host, int soft)
 		    SDHCI_INT_TIMEOUT | SDHCI_INT_DATA_END |
 		    SDHCI_INT_RESPONSE;
 
-	bcm2835_mmc_writel(host, host->ier, SDHCI_INT_ENABLE);
-	bcm2835_mmc_writel(host, host->ier, SDHCI_SIGNAL_ENABLE);
+	spin_lock_irqsave(&host->lock, flags);
+	bcm2835_mmc_writel(host, host->ier, SDHCI_INT_ENABLE, 3);
+	bcm2835_mmc_writel(host, host->ier, SDHCI_SIGNAL_ENABLE, 3);
+	spin_unlock_irqrestore(&host->lock, flags);
 
 	if (soft) {
 		/* force clock reconfiguration */
@@ -505,11 +528,14 @@ static void bcm2835_mmc_transfer_dma(struct bcm2835_host *host)
 		dev_err(mmc_dev(host->mmc), "dma_map_sg returned zero length\n");
 	}
 	if (desc) {
+		unsigned long flags;
+		spin_lock_irqsave(&host->lock, flags);
 		bcm2835_mmc_unsignal_irqs(host, SDHCI_INT_DATA_AVAIL |
 						    SDHCI_INT_SPACE_AVAIL);
 		host->tx_desc = desc;
 		desc->callback = bcm2835_mmc_dma_complete;
 		desc->callback_param = host;
+		spin_unlock_irqrestore(&host->lock, flags);
 		dmaengine_submit(desc);
 		dma_async_issue_pending(dma_chan);
 	}
@@ -528,8 +554,8 @@ static void bcm2835_mmc_set_transfer_irqs(struct bcm2835_host *host)
 	else
 		host->ier = (host->ier & ~dma_irqs) | pio_irqs;
 
-	bcm2835_mmc_writel(host, host->ier, SDHCI_INT_ENABLE);
-	bcm2835_mmc_writel(host, host->ier, SDHCI_SIGNAL_ENABLE);
+	bcm2835_mmc_writel(host, host->ier, SDHCI_INT_ENABLE, 4);
+	bcm2835_mmc_writel(host, host->ier, SDHCI_SIGNAL_ENABLE, 4);
 }
 
 
@@ -611,7 +637,7 @@ static void bcm2835_mmc_set_transfer_mode(struct bcm2835_host *host,
 			mode |= SDHCI_TRNS_AUTO_CMD12;
 		else if (host->mrq->sbc && (host->flags & SDHCI_AUTO_CMD23)) {
 			mode |= SDHCI_TRNS_AUTO_CMD23;
-			bcm2835_mmc_writel(host, host->mrq->sbc->arg, SDHCI_ARGUMENT2);
+			bcm2835_mmc_writel(host, host->mrq->sbc->arg, SDHCI_ARGUMENT2, 5);
 		}
 	}
 
@@ -674,7 +700,7 @@ void bcm2835_mmc_send_command(struct bcm2835_host *host, struct mmc_command *cmd
 
 	bcm2835_mmc_prepare_data(host, cmd);
 
-	bcm2835_mmc_writel(host, cmd->arg, SDHCI_ARGUMENT);
+	bcm2835_mmc_writel(host, cmd->arg, SDHCI_ARGUMENT, 6);
 
 	bcm2835_mmc_set_transfer_mode(host, cmd);
 
@@ -831,8 +857,8 @@ static void bcm2835_mmc_enable_sdio_irq_nolock(struct bcm2835_host *host, int en
 		else
 			host->ier &= ~SDHCI_INT_CARD_INT;
 
-		bcm2835_mmc_writel(host, host->ier, SDHCI_INT_ENABLE);
-		bcm2835_mmc_writel(host, host->ier, SDHCI_SIGNAL_ENABLE);
+		bcm2835_mmc_writel(host, host->ier, SDHCI_INT_ENABLE, 7);
+		bcm2835_mmc_writel(host, host->ier, SDHCI_SIGNAL_ENABLE, 7);
 		mmiowb();
 	}
 }
@@ -979,7 +1005,7 @@ static irqreturn_t bcm2835_mmc_irq(int irq, void *dev_id)
 		/* Clear selected interrupts. */
 		mask = intmask & (SDHCI_INT_CMD_MASK | SDHCI_INT_DATA_MASK |
 				  SDHCI_INT_BUS_POWER);
-		bcm2835_mmc_writel(host, mask, SDHCI_INT_STATUS);
+		bcm2835_mmc_writel(host, mask, SDHCI_INT_STATUS, 8);
 
 
 		if (intmask & SDHCI_INT_CMD_MASK)
@@ -1009,7 +1035,7 @@ static irqreturn_t bcm2835_mmc_irq(int irq, void *dev_id)
 
 		if (intmask) {
 			unexpected |= intmask;
-			bcm2835_mmc_writel(host, intmask, SDHCI_INT_STATUS);
+			bcm2835_mmc_writel(host, intmask, SDHCI_INT_STATUS, 9);
 		}
 
 		if (result == IRQ_NONE)
@@ -1067,7 +1093,10 @@ void bcm2835_mmc_set_clock(struct bcm2835_host *host, unsigned int clock)
 	int real_div = div, clk_mul = 1;
 	u16 clk = 0;
 	unsigned long timeout;
+	unsigned int input_clock = clock;
 
+	if (host->overclock_50 && (clock == 50000000))
+		clock = host->overclock_50 * 1000000 + 999999;
 
 	host->mmc->actual_clock = 0;
 
@@ -1091,7 +1120,14 @@ void bcm2835_mmc_set_clock(struct bcm2835_host *host, unsigned int clock)
 	div >>= 1;
 
 	if (real_div)
-		host->mmc->actual_clock = (host->max_clk * clk_mul) / real_div;
+		clock = (host->max_clk * clk_mul) / real_div;
+	host->mmc->actual_clock = clock;
+
+	if ((clock > input_clock) && (clock > host->max_overclock)) {
+		pr_warn("%s: Overclocking to %dHz\n",
+			mmc_hostname(host->mmc), clock);
+		host->max_overclock = clock;
+	}
 
 	clk |= (div & SDHCI_DIV_MASK) << SDHCI_DIVIDER_SHIFT;
 	clk |= ((div & SDHCI_DIV_HI_MASK) >> SDHCI_DIV_MASK_LEN)
@@ -1158,6 +1194,9 @@ static void bcm2835_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	u8 ctrl;
 	u16 clk, ctrl_2;
 
+	pr_debug("bcm2835_mmc_set_ios: clock %d, pwr %d, bus_width %d, timing %d, vdd %d, drv_type %d\n",
+		 ios->clock, ios->power_mode, ios->bus_width,
+		 ios->timing, ios->signal_voltage, ios->drv_type);
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -1251,8 +1290,10 @@ static void bcm2835_mmc_tasklet_finish(unsigned long param)
 		 (mrq->data && (mrq->data->error ||
 		  (mrq->data->stop && mrq->data->stop->error))))) {
 
+		spin_unlock_irqrestore(&host->lock, flags);
 		bcm2835_mmc_reset(host, SDHCI_RESET_CMD);
 		bcm2835_mmc_reset(host, SDHCI_RESET_DATA);
+		spin_lock_irqsave(&host->lock, flags);
 	}
 
 	host->mrq = NULL;
@@ -1267,21 +1308,19 @@ static void bcm2835_mmc_tasklet_finish(unsigned long param)
 
 
 
-int bcm2835_mmc_add_host(struct bcm2835_host *host)
+static int bcm2835_mmc_add_host(struct bcm2835_host *host)
 {
-	struct mmc_host *mmc;
+	struct mmc_host *mmc = host->mmc;
+	struct device *dev = mmc->parent;
 #ifndef FORCE_PIO
 	struct dma_slave_config cfg;
 #endif
 	int ret;
 
-	mmc = host->mmc;
-
 	bcm2835_mmc_reset(host, SDHCI_RESET_ALL);
 
 	host->clk_mul = 0;
 
-	mmc->ops = &bcm2835_ops;
 	mmc->f_max = host->max_clk;
 	mmc->f_max = host->max_clk;
 	mmc->f_min = host->max_clk / SDHCI_MAX_DIV_SPEC_300;
@@ -1297,19 +1336,19 @@ int bcm2835_mmc_add_host(struct bcm2835_host *host)
 
 	host->flags = SDHCI_AUTO_CMD23;
 
-	spin_lock_init(&host->lock);
-
-
+	if (mmc_debug || mmc_debug2)
+		pr_info("mmc_debug:%x mmc_debug2:%x\n", mmc_debug, mmc_debug2);
 #ifdef FORCE_PIO
-	pr_info("Forcing PIO mode\n");
+	dev_info(dev, "Forcing PIO mode\n");
 	host->have_dma = false;
 #else
-	if (!host->dma_chan_tx || !host->dma_chan_rx ||
-	IS_ERR(host->dma_chan_tx) || IS_ERR(host->dma_chan_rx)) {
-		pr_err("%s: Unable to initialise DMA channels. Falling back to PIO\n", DRIVER_NAME);
+	if (IS_ERR_OR_NULL(host->dma_chan_tx) ||
+	    IS_ERR_OR_NULL(host->dma_chan_rx)) {
+		dev_err(dev, "%s: Unable to initialise DMA channels. Falling back to PIO\n",
+			DRIVER_NAME);
 		host->have_dma = false;
 	} else {
-		pr_info("DMA channels allocated for the MMC driver");
+		dev_info(dev, "DMA channels allocated");
 		host->have_dma = true;
 
 		cfg.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
@@ -1327,8 +1366,6 @@ int bcm2835_mmc_add_host(struct bcm2835_host *host)
 		ret = dmaengine_slave_config(host->dma_chan_rx, &cfg);
 	}
 #endif
-
-
 	mmc->max_segs = 128;
 	mmc->max_req_size = 524288;
 	mmc->max_seg_size = mmc->max_req_size;
@@ -1346,22 +1383,20 @@ int bcm2835_mmc_add_host(struct bcm2835_host *host)
 
 	bcm2835_mmc_init(host, 0);
 #ifndef CONFIG_ARCH_BCM2835
-	ret = request_irq(host->irq, bcm2835_mmc_irq, 0 /*IRQF_SHARED*/,
-				  mmc_hostname(mmc), host);
+	ret = devm_request_irq(dev, host->irq, bcm2835_mmc_irq, 0,
+			       mmc_hostname(mmc), host);
 #else
-	ret = request_threaded_irq(host->irq, bcm2835_mmc_irq, bcm2835_mmc_thread_irq,
-				   IRQF_SHARED,	mmc_hostname(mmc), host);
+	ret = devm_request_threaded_irq(dev, host->irq, bcm2835_mmc_irq,
+					bcm2835_mmc_thread_irq, IRQF_SHARED,
+					mmc_hostname(mmc), host);
 #endif
 	if (ret) {
-		pr_err("%s: Failed to request IRQ %d: %d\n",
-		       mmc_hostname(mmc), host->irq, ret);
+		dev_err(dev, "Failed to request IRQ %d: %d\n", host->irq, ret);
 		goto untasklet;
 	}
 
 	mmiowb();
 	mmc_add_host(mmc);
-
-	pr_info("Load BCM2835 MMC driver\n");
 
 	return 0;
 
@@ -1374,118 +1409,89 @@ untasklet:
 static int bcm2835_mmc_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-#ifdef CONFIG_ARCH_BCM2835
 	struct device_node *node = dev->of_node;
 	struct clk *clk;
-#endif
 	struct resource *iomem;
-	struct bcm2835_host *host = NULL;
-
-	int ret;
+	struct bcm2835_host *host;
 	struct mmc_host *mmc;
-#if !defined(CONFIG_ARCH_BCM2835) && !defined(FORCE_PIO)
-	dma_cap_mask_t mask;
-#endif
+	int ret;
 
-	iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!iomem) {
-		ret = -ENOMEM;
-		goto err;
-	}
+	mmc = mmc_alloc_host(sizeof(*host), dev);
+	if (!mmc)
+		return -ENOMEM;
 
-	if (resource_size(iomem) < 0x100)
-		dev_err(&pdev->dev, "Invalid iomem size!\n");
-
-	mmc = mmc_alloc_host(sizeof(struct bcm2835_host), dev);
+	mmc->ops = &bcm2835_ops;
 	host = mmc_priv(mmc);
 	host->mmc = mmc;
+	host->timeout = msecs_to_jiffies(1000);
+	spin_lock_init(&host->lock);
 
-
-	if (IS_ERR(host)) {
-		ret = PTR_ERR(host);
+	iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	host->ioaddr = devm_ioremap_resource(dev, iomem);
+	if (IS_ERR(host->ioaddr)) {
+		ret = PTR_ERR(host->ioaddr);
 		goto err;
 	}
 
 	host->phys_addr = iomem->start + BCM2835_VCMMU_SHIFT;
 
-#ifndef CONFIG_ARCH_BCM2835
 #ifndef FORCE_PIO
-	dma_cap_zero(mask);
-	/* we don't care about the channel, any would work */
-	dma_cap_set(DMA_SLAVE, mask);
+	if (node && of_property_read_bool(node, "dmas")) {
+		host->dma_chan_tx = of_dma_request_slave_channel(node, "tx");
+		host->dma_chan_rx = of_dma_request_slave_channel(node, "rx");
+	} else {
+		dma_cap_mask_t mask;
 
-	host->dma_chan_tx = dma_request_channel(mask, NULL, NULL);
-	host->dma_chan_rx = dma_request_channel(mask, NULL, NULL);
+		dma_cap_zero(mask);
+		/* we don't care about the channel, any would work */
+		dma_cap_set(DMA_SLAVE, mask);
+		host->dma_chan_tx = dma_request_channel(mask, NULL, NULL);
+		host->dma_chan_rx = dma_request_channel(mask, NULL, NULL);
+	}
 #endif
-	host->max_clk = BCM2835_CLOCK_FREQ;
-
-#else
-#ifndef FORCE_PIO
-	host->dma_chan_tx = of_dma_request_slave_channel(node, "tx");
-	host->dma_chan_rx = of_dma_request_slave_channel(node, "rx");
-#endif
-	clk = of_clk_get(node, 0);
+	clk = devm_clk_get(dev, NULL);
 	if (IS_ERR(clk)) {
-		dev_err(dev, "get CLOCK failed\n");
+		dev_err(dev, "could not get clk\n");
 		ret = PTR_ERR(clk);
-		goto out;
+		goto err;
 	}
-	host->max_clk = (clk_get_rate(clk));
-#endif
+
+	host->max_clk = clk_get_rate(clk);
+
 	host->irq = platform_get_irq(pdev, 0);
-
-	if (!request_mem_region(iomem->start, resource_size(iomem),
-		mmc_hostname(host->mmc))) {
-		dev_err(&pdev->dev, "cannot request region\n");
-		ret = -EBUSY;
-		goto err_request;
-	}
-
-	host->ioaddr = ioremap(iomem->start, resource_size(iomem));
-	if (!host->ioaddr) {
-		dev_err(&pdev->dev, "failed to remap registers\n");
-		ret = -ENOMEM;
-		goto err_remap;
-	}
-
-	platform_set_drvdata(pdev, host);
-
-
 	if (host->irq <= 0) {
 		dev_err(dev, "get IRQ failed\n");
 		ret = -EINVAL;
-		goto out;
+		goto err;
 	}
 
+	if (node) {
+		mmc_of_parse(mmc);
 
-#ifndef CONFIG_ARCH_BCM2835
-	mmc->caps |= MMC_CAP_4_BIT_DATA;
-#else
-	mmc_of_parse(mmc);
-#endif
-	host->timeout = msecs_to_jiffies(1000);
-	spin_lock_init(&host->lock);
-	mmc->ops = &bcm2835_ops;
-	return bcm2835_mmc_add_host(host);
+		/* Read any custom properties */
+		of_property_read_u32(node,
+				     "brcm,overclock-50",
+				     &host->overclock_50);
+	} else {
+		mmc->caps |= MMC_CAP_4_BIT_DATA;
+	}
 
+	ret = bcm2835_mmc_add_host(host);
+	if (ret)
+		goto err;
 
-err_remap:
-	release_mem_region(iomem->start, resource_size(iomem));
-err_request:
-	mmc_free_host(host->mmc);
+	platform_set_drvdata(pdev, host);
+
+	return 0;
 err:
-	dev_err(&pdev->dev, "%s failed %d\n", __func__, ret);
-	return ret;
-out:
-	if (mmc)
-		mmc_free_host(mmc);
+	mmc_free_host(mmc);
+
 	return ret;
 }
 
 static int bcm2835_mmc_remove(struct platform_device *pdev)
 {
 	struct bcm2835_host *host = platform_get_drvdata(pdev);
-	struct resource *iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	unsigned long flags;
 	int dead;
 	u32 scratch;
@@ -1523,8 +1529,6 @@ static int bcm2835_mmc_remove(struct platform_device *pdev)
 
 	tasklet_kill(&host->finish_tasklet);
 
-	iounmap(host->ioaddr);
-	release_mem_region(iomem->start, resource_size(iomem));
 	mmc_free_host(host->mmc);
 	platform_set_drvdata(pdev, NULL);
 
@@ -1551,6 +1555,8 @@ static struct platform_driver bcm2835_mmc_driver = {
 };
 module_platform_driver(bcm2835_mmc_driver);
 
+module_param(mmc_debug, uint, 0644);
+module_param(mmc_debug2, uint, 0644);
 MODULE_ALIAS("platform:mmc-bcm2835");
 MODULE_DESCRIPTION("BCM2835 SDHCI driver");
 MODULE_LICENSE("GPL v2");

@@ -56,6 +56,7 @@
 
 #include "virt-dma.h"
 
+static unsigned dma_debug;
 
 struct bcm2835_dmadev {
 	struct dma_device ddev;
@@ -583,6 +584,7 @@ static struct dma_async_tx_descriptor *bcm2835_dma_prep_slave_sg(
 		uint32_t len = sg_dma_len(sgent);
 
 		for (j = 0; j < len; j += max_size) {
+			u32 waits = SDHCI_BCM_DMA_WAITS;
 			struct bcm2835_dma_cb *control_block =
 				&d->control_block_base[i+splitct];
 
@@ -600,7 +602,9 @@ static struct dma_async_tx_descriptor *bcm2835_dma_prep_slave_sg(
 			}
 
 			/* Common part */
-			control_block->info |= BCM2835_DMA_WAITS(SDHCI_BCM_DMA_WAITS);
+			if ((dma_debug >> 0) & 0x1f)
+				waits = (dma_debug >> 0) & 0x1f;
+			control_block->info |= BCM2835_DMA_WAITS(waits);
 			control_block->info |= BCM2835_DMA_WAIT_RESP;
 
 			/* Enable  */
@@ -808,6 +812,7 @@ static int bcm2835_dma_device_slave_caps(struct dma_chan *dchan,
 	caps->src_addr_widths = BIT(DMA_SLAVE_BUSWIDTH_4_BYTES);
 	caps->dstn_addr_widths = BIT(DMA_SLAVE_BUSWIDTH_4_BYTES);
 	caps->directions = BIT(DMA_DEV_TO_MEM) | BIT(DMA_MEM_TO_DEV);
+	caps->residue_granularity = DMA_RESIDUE_GRANULARITY_BURST;
 	caps->cmd_pause = false;
 	caps->cmd_terminate = true;
 
@@ -969,6 +974,8 @@ static int bcm2835_dma_probe(struct platform_device *pdev)
 	}
 
 	dev_info(&pdev->dev, "Load BCM2835 DMA engine driver\n");
+	if (dma_debug)
+		dev_info(&pdev->dev, "dma_debug:%x\n", dma_debug);
 
 	return 0;
 
@@ -1045,6 +1052,7 @@ module_platform_driver(bcm2835_dma_driver);
 
 #endif
 
+module_param(dma_debug, uint, 0644);
 MODULE_ALIAS("platform:bcm2835-dma");
 MODULE_DESCRIPTION("BCM2835 DMA engine driver");
 MODULE_AUTHOR("Florian Meier <florian.meier@koalo.de>");

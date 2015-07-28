@@ -1414,8 +1414,12 @@ static void assign_and_init_hc(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh)
 	dwc_otg_hc_init(hcd->core_if, hc);
 
 	local_irq_save(flags);
-	local_fiq_disable();
-	fiq_fsm_spin_lock(&hcd->fiq_state->lock);
+
+	if (fiq_enable) {
+		local_fiq_disable();
+		fiq_fsm_spin_lock(&hcd->fiq_state->lock);
+	}
+
 	/* Enable the top level host channel interrupt. */
 	intr_enable = (1 << hc->hc_num);
 	DWC_MODIFY_REG32(&hcd->core_if->host_if->host_global_regs->haintmsk, 0, intr_enable);
@@ -1423,8 +1427,12 @@ static void assign_and_init_hc(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh)
 	/* Make sure host channel interrupts are enabled. */
 	gintmsk.b.hcintr = 1;
 	DWC_MODIFY_REG32(&hcd->core_if->core_global_regs->gintmsk, 0, gintmsk.d32);
-	fiq_fsm_spin_unlock(&hcd->fiq_state->lock);
-	local_fiq_enable();
+
+	if (fiq_enable) {
+		fiq_fsm_spin_unlock(&hcd->fiq_state->lock);
+		local_fiq_enable();
+	}
+	
 	local_irq_restore(flags);
 	hc->qh = qh;
 }
@@ -2012,7 +2020,7 @@ dwc_otg_transaction_type_e dwc_otg_hcd_select_transactions(dwc_otg_hcd_t * hcd)
 		 * we hold off on bulk retransmissions to reduce NAK interrupt overhead for full-speed
 		 * cheeky devices that just hold off using NAKs
 		 */
-		if (nak_holdoff && qh->do_split) {
+		if (fiq_enable && nak_holdoff && qh->do_split) {
 			if (qh->nak_frame != 0xffff) {
 				uint16_t next_frame = dwc_frame_num_inc(qh->nak_frame, (qh->ep_type == UE_BULK) ? nak_holdoff : 8);
 				uint16_t frame = dwc_otg_hcd_get_frame_number(hcd);
