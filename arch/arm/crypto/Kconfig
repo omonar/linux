@@ -8,6 +8,11 @@ menuconfig ARM_CRYPTO
 
 if ARM_CRYPTO
 
+config CRYPTO_GLUE_HELPER_ARM
+	tristate
+	depends on KERNEL_MODE_NEON
+	select CRYPTO_ALGAPI
+
 config CRYPTO_SHA1_ARM
 	tristate "SHA1 digest algorithm (ARM-asm)"
 	select CRYPTO_SHA1
@@ -114,6 +119,87 @@ config CRYPTO_AES_ARM_CE
 	help
 	  Use an implementation of AES in CBC, CTR and XTS modes that uses
 	  ARMv8 Crypto Extensions
+
+config CRYPTO_SERPENT_ARM
+	tristate "Serpent cipher algorithm (ARM-asm)"
+	select CRYPTO_ALGAPI
+	select CRYPTO_SERPENT
+	help
+	  Use optimized Serpent assembler routines for ARM platforms.
+
+	  Serpent cipher algorithm, by Anderson, Biham & Knudsen.
+
+	  Keys are allowed to be from 0 to 256 bits in length, in steps
+	  of 8 bits.
+
+	  This module provides Serpent cipher algorithm that processes 16
+	  blocks parallel using AVX2 instruction set.
+
+	  See also:
+	  <http://www.cl.cam.ac.uk/~rja14/serpent.html>
+
+config CRYPTO_SERPENT_ARM_NEON
+	tristate "Serpent cipher algorithm using NEON instructions"
+	depends on KERNEL_MODE_NEON
+	select CRYPTO_ALGAPI
+	select CRYPTO_SERPENT_ARM
+	select CRYPTO_ABLK_HELPER
+	select CRYPTO_CRYPTD
+	select CRYPTO_GLUE_HELPER_ARM
+	select CRYPTO_LRW
+	select CRYPTO_XTS
+	help
+	  Serpent cipher algorithm, by Anderson, Biham & Knudsen.
+
+	  Keys are allowed to be from 0 to 256 bits in length, in steps
+	  of 8 bits.
+
+	  This module provides Serpent cipher algorithm that processes eigth
+	  blocks parallel using NEON instruction set.
+
+	  See also:
+	  <http://www.cl.cam.ac.uk/~rja14/serpent.html>
+
+config CRYPTO_TWOFISH_ARM
+	tristate "Twofish cipher algorithms (ARM-asm)"
+	select CRYPTO_ALGAPI
+	select CRYPTO_TWOFISH_COMMON
+	help
+	  Twofish cipher algorithm.
+
+	  Twofish was submitted as an AES (Advanced Encryption Standard)
+	  candidate cipher by researchers at CounterPane Systems.  It is a
+	  16 round block cipher supporting key sizes of 128, 192, and 256
+	  bits.
+
+	  Use optimized Twofish assembler routines for ARM platforms.
+
+	  See also:
+	  <http://www.schneier.com/twofish.html>
+
+config CRYPTO_TWOFISH_ARM_NEON
+	tristate "Twofish cipher algorithms using NEON instructions"
+	depends on KERNEL_MODE_NEON
+	select CRYPTO_ALGAPI
+	select CRYPTO_TWOFISH_ARM
+	select CRYPTO_ABLK_HELPER
+	select CRYPTO_CRYPTD
+	select CRYPTO_GLUE_HELPER_ARM
+	select CRYPTO_LRW
+	select CRYPTO_XTS
+	help
+	  Twofish cipher algorithm.
+
+	  Twofish was submitted as an AES (Advanced Encryption Standard)
+	  candidate cipher by researchers at CounterPane Systems.  It is a
+	  16 round block cipher supporting key sizes of 128, 192, and 256
+	  bits.
+
+	  This module provides Twofish cipher algorithm that processes eight
+	  blocks parallel using NEON instruction set.
+
+	  See also:
+	  <http://www.schneier.com/twofish.html>
 
 config CRYPTO_GHASH_ARM_CE
 	tristate "PMULL-accelerated GHASH using ARMv8 Crypto Extensions"
