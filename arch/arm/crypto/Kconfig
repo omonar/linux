@@ -132,9 +132,6 @@ config CRYPTO_SERPENT_ARM
 	  Keys are allowed to be from 0 to 256 bits in length, in steps
 	  of 8 bits.
 
-	  This module provides Serpent cipher algorithm that processes 16
-	  blocks parallel using AVX2 instruction set.
-
 	  See also:
 	  <http://www.cl.cam.ac.uk/~rja14/serpent.html>
 
