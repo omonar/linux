@@ -1835,10 +1835,16 @@ static const struct alg_test_desc alg_test_descs[] = {
 		.alg = "__cbc-serpent-avx2",
 		.test = alg_test_null,
 	}, {
+		.alg = "__cbc-serpent-neon",
+		.test = alg_test_null,
+	}, {
 		.alg = "__cbc-serpent-sse2",
 		.test = alg_test_null,
 	}, {
 		.alg = "__cbc-twofish-avx",
+		.test = alg_test_null,
+	}, {
+		.alg = "__cbc-twofish-neon",
 		.test = alg_test_null,
 	}, {
 		.alg = "__driver-cbc-aes-aesni",
@@ -1863,10 +1869,16 @@ static const struct alg_test_desc alg_test_descs[] = {
 		.alg = "__driver-cbc-serpent-avx2",
 		.test = alg_test_null,
 	}, {
+		.alg = "__driver-cbc-serpent-neon",
+		.test = alg_test_null,
+	}, {
 		.alg = "__driver-cbc-serpent-sse2",
 		.test = alg_test_null,
 	}, {
 		.alg = "__driver-cbc-twofish-avx",
+		.test = alg_test_null,
+	}, {
+		.alg = "__driver-cbc-twofish-neon",
 		.test = alg_test_null,
 	}, {
 		.alg = "__driver-ecb-aes-aesni",
@@ -1891,10 +1903,16 @@ static const struct alg_test_desc alg_test_descs[] = {
 		.alg = "__driver-ecb-serpent-avx2",
 		.test = alg_test_null,
 	}, {
+		.alg = "__driver-ecb-serpent-neon",
+		.test = alg_test_null,
+	}, {
 		.alg = "__driver-ecb-serpent-sse2",
 		.test = alg_test_null,
 	}, {
 		.alg = "__driver-ecb-twofish-avx",
+		.test = alg_test_null,
+	}, {
+		.alg = "__driver-ecb-twofish-neon",
 		.test = alg_test_null,
 	}, {
 		.alg = "__ghash-pclmulqdqni",
@@ -2373,10 +2391,16 @@ static const struct alg_test_desc alg_test_descs[] = {
 		.alg = "cryptd(__driver-ecb-serpent-avx2)",
 		.test = alg_test_null,
 	}, {
+		.alg = "cryptd(__driver-ecb-serpent-neon)",
+		.test = alg_test_null,
+	}, {
 		.alg = "cryptd(__driver-ecb-serpent-sse2)",
 		.test = alg_test_null,
 	}, {
 		.alg = "cryptd(__driver-ecb-twofish-avx)",
+		.test = alg_test_null,
+	}, {
+		.alg = "cryptd(__driver-ecb-twofish-neon)",
 		.test = alg_test_null,
 	}, {
 		.alg = "cryptd(__driver-gcm-aes-aesni)",
